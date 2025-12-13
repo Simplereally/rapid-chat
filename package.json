@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite dev --port 3333",
     "build": "vite build",
+    "build:prod": "vite build --mode production",
     "serve": "vite preview",
     "test": "vitest run",
     "update-pkgs": "bunx npm-check-updates -u",
@@ -17,8 +18,8 @@
     "lint": "biome lint",
     "lint-fix": "biome lint --fix",
     "fix-all": "bun run format-fix && bun run lint-fix && bun run check-fix",
-    "deploy": "bun run build && source .env.local && wrangler deploy --name $CF_WORKER_NAME",
-    "deploy:preview": "bun run build && source .env.local && wrangler deploy --name $CF_WORKER_NAME --dry-run",
+    "deploy": "bun run build:prod && source .env.local && wrangler deploy --name $CF_WORKER_NAME",
+    "deploy:preview": "bun run build:prod && source .env.local && wrangler deploy --name $CF_WORKER_NAME --dry-run",
     "cf:login": "wrangler login",
     "cf:whoami": "wrangler whoami",
     "typecheck": "bun x tsc -b ./tsconfig.json && bun x tsc -p ./convex/tsconfig.json",

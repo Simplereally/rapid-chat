@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  // Worker name is set via VITE_CF_WORKER_NAME in .env.local
+  // Worker name is set via CF_WORKER_NAME in .env.local
   // and passed to wrangler via --name flag
   "compatibility_date": "2024-11-01",
   "compatibility_flags": ["nodejs_compat"],

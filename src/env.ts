@@ -1,13 +1,18 @@
 import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
 
+const isServer = typeof window === "undefined";
+
 export const env = createEnv({
 	/**
 	 * Server-side environment variables - never exposed to the browser.
 	 * These are only available in server contexts (SSR, API routes, build scripts).
 	 */
 	server: {
-		CF_WORKER_NAME: z.string().min(1),
+		// Tooling-only variables. These are useful in local dev / deploy scripts,
+		// but should not be required at runtime in the browser or Cloudflare Worker.
+		CONVEX_DEPLOYMENT: z.string().min(1).optional(),
+		CF_WORKER_NAME: z.string().min(1).optional(),
 	},
 
 	/**
@@ -17,15 +22,19 @@ export const env = createEnv({
 	clientPrefix: "VITE_",
 
 	client: {
-		VITE_CONVEX_URL: z.string().url(),
+		VITE_CONVEX_URL: z.url(),
 		VITE_APP_TITLE: z.string().min(1),
 	},
 
 	/**
 	 * What object holds the environment variables at runtime.
-	 * For Vite, this is import.meta.env
+	 * - In Vite, client-visible vars come from import.meta.env (VITE_*)
+	 * - In Node (dev/build scripts), unprefixed vars live on process.env
 	 */
-	runtimeEnv: import.meta.env,
+	runtimeEnv: {
+		...import.meta.env,
+		...(typeof process !== "undefined" ? process.env : {}),
+	},
 
 	/**
 	 * Treat empty strings as undefined so that:
@@ -38,7 +47,7 @@ export const env = createEnv({
 	 * Tell the library when we're in a server context.
 	 * Used to allow/deny access to server-only variables.
 	 */
-	isServer: typeof window === "undefined",
+	isServer,
 
 	/**
 	 * Custom error handler for validation failures.
@@ -48,7 +57,7 @@ export const env = createEnv({
 		const formatted = issues
 			.map(
 				(issue) =>
-					`  • ${issue.path?.join(".") || "unknown"}: ${issue.message}`,
+					`  • ${Array.isArray(issue.path) ? issue.path.join(".") : "unknown"}: ${issue.message}`,
 			)
 			.join("\n");
 
