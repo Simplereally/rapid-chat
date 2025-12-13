@@ -2,6 +2,7 @@
   "name": "bun-tanstackstart-convex",
   "private": true,
   "type": "module",
+  "trustedDependencies": ["@swc/core", "esbuild", "sharp", "workerd"],
   "scripts": {
     "dev": "vite dev --port 3333",
     "build": "vite build",
