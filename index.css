@@ -1,0 +1,322 @@
+/* ═══════════════════════════════════════════════════════════════
+   PREMIUM DESIGN SYSTEM - CARBON & EMBER (2025)
+   Typography: Bricolage Grotesque (Headings) + Manrope (Body)
+   Atmosphere: Sophisticated Carbon, Warm Paper, Ember Accents
+   ═══════════════════════════════════════════════════════════════ */
+
+@layer base {
+	:root {
+		/* ─── Foundation: Warm Paper (Light Mode) ─── */
+		--background: 35 15% 97%; /* Warm creamy white, not clinical */
+		--foreground: 240 5% 15%; /* Deep charcoal, almost black */
+
+		/* ─── Surfaces ─── */
+		--card: 35 15% 99%;
+		--card-foreground: 240 5% 15%;
+
+		--popover: 35 15% 100%;
+		--popover-foreground: 240 5% 15%;
+
+		/* ─── Brand: Ember (Refined) ─── */
+		--primary: 22 80% 50%; /* Toned down saturation from 95% */
+		--primary-hover: 22 80% 45%;
+		--primary-foreground: 0 0% 100%;
+
+		/* ─── Secondary: Neutral Dark ─── */
+		--secondary: 240 4% 16%;
+		--secondary-hover: 240 4% 12%;
+		--secondary-foreground: 0 0% 98%;
+
+		/* ─── Accent: Subtle Stone ─── */
+		--accent: 35 10% 92%;
+		--accent-hover: 35 10% 90%;
+		--accent-foreground: 240 5% 15%;
+
+		/* ─── Muted ─── */
+		--muted: 35 10% 94%;
+		--muted-foreground: 240 4% 45%;
+
+		/* ─── States ─── */
+		--destructive: 0 85% 60%;
+		--destructive-foreground: 0 0% 98%;
+
+		--success: 140 60% 45%;
+		--success-foreground: 0 0% 98%;
+
+		--warning: 45 90% 55%;
+		--warning-foreground: 0 0% 10%;
+
+		--info: 210 80% 55%;
+		--info-foreground: 0 0% 98%;
+
+		/* ─── Borders & Inputs ─── */
+		--border: 240 5% 88%;
+		--input: 240 5% 88%;
+		--ring: 22 95% 52%; /* Focus ring matches Primary */
+
+		--radius: 0.5rem; /* Tighter radius for a more professional feel */
+
+		/* ─── Sidebar ─── */
+		--sidebar-background: 35 15% 96%;
+		--sidebar-foreground: 240 5% 15%;
+		--sidebar-primary: 22 95% 52%;
+		--sidebar-primary-foreground: 0 0% 98%;
+		--sidebar-accent: 35 10% 91%;
+		--sidebar-accent-foreground: 240 5% 15%;
+		--sidebar-border: 240 5% 85%;
+		--sidebar-ring: 22 95% 52%;
+
+		/* ─── Motion Curves ─── */
+		--ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+		--ease-snappy: cubic-bezier(0.2, 0, 0, 1);
+		--ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+		--duration-base: 300ms;
+
+		/* ─── Charts ─── */
+		--chart-1: 22 95% 52%; /* Ember */
+		--chart-2: 240 4% 16%; /* Charcoal */
+		--chart-3: 140 60% 45%; /* Forest */
+		--chart-4: 45 90% 55%; /* Gold */
+		--chart-5: 210 80% 55%; /* Sky */
+	}
+
+	.dark {
+		/* ─── Foundation: Deep Graphite (Dark Mode) ─── */
+		--background: 240 5% 8%; /* Deep neutral carbon */
+		--foreground: 40 5% 85%; /* Reduced brightness from 96% to 90% */
+
+		/* ─── Surfaces ─── */
+		--card: 240 5% 10%; /* Slightly lighter than bg */
+		--card-foreground: 40 5% 90%;
+
+		--popover: 240 5% 10%;
+		--popover-foreground: 40 5% 90%;
+
+		/* ─── Brand: Resonant Ember (Refined) ─── */
+		--primary: 22 85% 58%; /* Toned down from 100% saturation */
+		--primary-hover: 22 85% 63%;
+		--primary-foreground: 0 0% 100%;
+
+		/* ─── Secondary: Light Stone ─── */
+		--secondary: 240 5% 18%;
+		--secondary-hover: 240 5% 22%;
+		--secondary-foreground: 40 10% 96%;
+
+		/* ─── Accent ─── */
+		--accent: 240 5% 15%;
+		--accent-hover: 240 5% 20%;
+		--accent-foreground: 40 10% 96%;
+
+		/* ─── Muted ─── */
+		--muted: 240 5% 16%;
+		--muted-foreground: 240 5% 65%;
+
+		/* ─── States ─── */
+		--destructive: 0 70% 50%;
+		--destructive-foreground: 0 0% 98%;
+
+		--success: 140 50% 45%;
+		--success-foreground: 0 0% 98%;
+
+		--warning: 45 90% 50%;
+		--warning-foreground: 0 0% 10%;
+
+		--info: 210 70% 55%;
+		--info-foreground: 0 0% 98%;
+
+		/* ─── Borders & Inputs ─── */
+		--border: 240 5% 18%;
+		--input: 240 5% 18%;
+		--ring: 22 100% 60%;
+
+		/* ─── Sidebar ─── */
+		--sidebar-background: 240 5% 8%;
+		--sidebar-foreground: 240 5% 65%;
+		--sidebar-primary: 22 100% 60%;
+		--sidebar-primary-foreground: 0 0% 100%;
+		--sidebar-accent: 240 5% 15%;
+		--sidebar-accent-foreground: 40 10% 96%;
+		--sidebar-border: 240 5% 18%;
+		--sidebar-ring: 22 100% 60%;
+
+		/* ─── Charts (Dark) ─── */
+		--chart-1: 22 100% 60%;
+		--chart-2: 240 5% 40%;
+		--chart-3: 140 50% 45%;
+		--chart-4: 45 90% 50%;
+		--chart-5: 210 70% 55%;
+	}
+}
+
+@layer base {
+	body {
+		background-color: hsl(var(--background));
+		color: hsl(var(--foreground));
+		font-family: "Manrope", sans-serif; /* Typography Foundation */
+		position: relative; /* Subtle noise fallback */
+		font-feature-settings: "cv11", "ss01"; /* Enable stylistic sets if available */
+	}
+
+	/* Heading Styles */
+	h1,
+	h2,
+	h3,
+	h4,
+	h5,
+	h6 {
+		font-family: "Bricolage Grotesque", sans-serif;
+		letter-spacing: -0.025em; /* Tighter for display headings */
+		font-weight: 600;
+	}
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PREMIUM COMPONENT OVERRIDES
+   ═══════════════════════════════════════════════════════════════ */
+
+@layer utilities {
+	.clip-path-slant {
+		clip-path: polygon(0 0, 100% 0, 100% 85%, 0 100%);
+	}
+}
+
+@layer components {
+	/* Cards with subtle 1px inner border effect via shadow */
+	.card-premium {
+		background-color: hsl(var(--card));
+		border: 1px solid hsl(var(--border) / 0.6);
+		box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+		position: relative;
+		overflow: hidden;
+		transition: border-color 0.2s;
+	}
+
+	.card-premium:hover {
+		border-color: hsl(var(--border));
+	}
+
+	/* Optional Laser Beam Effect */
+	.card-laser-top {
+		position: relative;
+	}
+
+	.card-laser-top::before {
+		content: "";
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		height: 3px;
+		background: linear-gradient(90deg, hsl(var(--primary)) 0%, hsl(30, 90%, 65%) 100%);
+		transform: scaleX(0);
+		transform-origin: right;
+		transition: transform 0.15s cubic-bezier(0.5, 0, 0.5, 1);
+		z-index: 20;
+	}
+
+	.card-laser-top:hover::before {
+		transform: scaleX(1);
+		transform-origin: left;
+	}
+
+	/* Buttons */
+	.btn-primary {
+		background-color: hsl(var(--primary));
+		color: hsl(var(--primary-foreground));
+		box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+		border-radius: 0.375rem;
+		font-weight: 500;
+		transition: transform 0.1s var(--ease-snappy);
+	}
+
+	.btn-primary:hover {
+		background-color: hsl(var(--primary) / 0.9);
+	}
+
+	.btn-primary:active {
+		transform: scale(0.98);
+	}
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   FUNCTIONAL COMPONENT RESTORATION (Updated for Carbon/Ember)
+   ═══════════════════════════════════════════════════════════════ */
+
+@layer components {
+	/* Calendar Event Dot */
+	.has-event {
+		position: relative;
+		font-weight: 600;
+	}
+
+	.has-event::after {
+		content: "";
+		position: absolute;
+		bottom: 2px;
+		left: 50%;
+		transform: translateX(-50%);
+		width: 4px;
+		height: 4px;
+		border-radius: 50%;
+		background-color: hsl(var(--primary));
+	}
+
+	.has-event[aria-selected="true"]::after {
+		background-color: hsl(var(--primary-foreground));
+	}
+
+	/* Premium Input */
+	.input-premium {
+		background-color: hsl(var(--input) / 0.5);
+		border: 1px solid hsl(var(--input));
+		transition: all 200ms var(--ease-smooth);
+	}
+
+	.input-premium:focus-within {
+		border-color: hsl(var(--ring));
+		box-shadow: 0 0 0 1px hsl(var(--ring));
+	}
+
+	/* Premium Toast */
+	.toast-premium {
+		background-color: hsl(var(--card) / 0.95);
+		backdrop-filter: blur(12px);
+		border: 1px solid hsl(var(--border) / 0.5);
+		box-shadow:
+			0 10px 15px -3px rgb(0 0 0 / 0.1),
+			0 4px 6px -4px rgb(0 0 0 / 0.1);
+		color: hsl(var(--foreground));
+	}
+
+	/* Icon Button */
+	.icon-button {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 0.375rem;
+		transition: color 150ms ease, background-color 150ms ease;
+		aspect-ratio: 1;
+	}
+
+	.icon-button:hover {
+		background-color: hsl(var(--secondary));
+		color: hsl(var(--secondary-foreground));
+	}
+
+	/* Scroll Shadow */
+	.scroll-shadow {
+		position: relative;
+	}
+
+	.scroll-shadow::after {
+		content: "";
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		height: 24px;
+		background: linear-gradient(to top, hsl(var(--background)), transparent);
+		pointer-events: none;
+		z-index: 10;
+	}
+}
