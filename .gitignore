@@ -13,5 +13,6 @@ tsconfig.tsbuildinfo
 .wrangler
 .output
 .vinxi
+convex/_generated
 todos.json
 todo/
