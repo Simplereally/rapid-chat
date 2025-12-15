@@ -1,11 +1,31 @@
-import { chat, type StreamChunk, toStreamResponse } from "@tanstack/ai";
+import { chat, toStreamResponse } from "@tanstack/ai";
 import { ollama } from "@tanstack/ai-ollama";
 import { createFileRoute } from "@tanstack/react-router";
 import { ConvexHttpClient } from "convex/browser";
 import { z } from "zod";
 import { env } from "@/env";
+import { webSearchTool } from "@/tools";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
+
+/**
+ * Available tools for the chat model.
+ * Add new tools here to make them available to the LLM.
+ */
+const availableTools = [
+	webSearchTool,
+	// Add more tools here as needed:
+	// calculatorTool,
+	// urlReaderTool,
+];
+
+/**
+ * Base system prompt that's always included.
+ * Provides context about available capabilities.
+ */
+const BASE_SYSTEM_PROMPT = `You are a helpful assistant with tool-calling capabilities.
+
+Use tools when you need current information or capabilities beyond your training data. After receiving tool results, integrate them naturally into your response with proper attribution. If no tool is needed, answer directly.`;
 
 const MessageSchema = z.object({
 	role: z.enum(["system", "user", "assistant"]),
@@ -15,12 +35,6 @@ const MessageSchema = z.object({
 const ChatRequestSchema = z.object({
 	messages: z.array(MessageSchema),
 });
-
-type GenericChat = (
-	options: Record<string, unknown>,
-) => AsyncIterable<StreamChunk>;
-
-const genericChat: GenericChat = chat as unknown as GenericChat;
 
 export const Route = createFileRoute("/api/chat")({
 	server: {
@@ -65,17 +79,28 @@ export const Route = createFileRoute("/api/chat")({
 						content: "",
 					});
 
-					const conversationMessages = incomingMessages.filter(
-						(m) => m.role !== "system",
-					);
+					// Separate system messages for systemPrompts and filter conversation messages
+					const clientSystemPrompts = incomingMessages
+						.filter((m) => m.role === "system")
+						.map((m) => m.content);
+
+					// Combine base system prompt with any client-provided prompts
+					const allSystemPrompts = [BASE_SYSTEM_PROMPT, ...clientSystemPrompts];
+
+					const conversationMessages = incomingMessages
+						.filter((m): m is { role: "user" | "assistant"; content: string } => 
+							m.role === "user" || m.role === "assistant"
+						);
 
 					// 2. Start the chat stream
-					const stream = await genericChat({
+					const stream = chat({
 						adapter: ollama({
 							baseUrl: env.OLLAMA_BASE_URL,
 						}),
 						messages: conversationMessages,
-						model: env.OLLAMA_MODEL,
+						model: env.OLLAMA_MODEL as "llama3",
+						systemPrompts: allSystemPrompts,
+						tools: availableTools,
 					});
 
 					// 3. Wrap the stream to sync with Convex

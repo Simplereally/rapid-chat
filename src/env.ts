@@ -10,6 +10,7 @@ export const env = createEnv({
 		OLLAMA_MODEL: z.string().min(1),
 		OLLAMA_BASE_URL: z.string().url().optional(),
 		CLERK_SECRET_KEY: z.string().min(1),
+		TAVILY_API_KEY: z.string().min(1),
 	},
 
 	/**
@@ -36,6 +37,7 @@ export const env = createEnv({
 		OLLAMA_MODEL: process.env.OLLAMA_MODEL,
 		OLLAMA_BASE_URL: process.env.OLLAMA_BASE_URL,
 		CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY,
+		TAVILY_API_KEY: process.env.TAVILY_API_KEY,
 	},
 
 	/**
