@@ -7,7 +7,8 @@ export const env = createEnv({
 	 * These are only available in server contexts (SSR, API routes, build scripts).
 	 */
 	server: {
-		CF_WORKER_NAME: z.string().min(1),
+		OLLAMA_MODEL: z.string().min(1),
+		OLLAMA_BASE_URL: z.string().url().optional(),
 	},
 
 	/**
@@ -25,7 +26,11 @@ export const env = createEnv({
 	 * What object holds the environment variables at runtime.
 	 * For Vite, this is import.meta.env
 	 */
-	runtimeEnv: import.meta.env,
+	runtimeEnv: {
+		...import.meta.env,
+		OLLAMA_MODEL: process.env.OLLAMA_MODEL,
+		OLLAMA_BASE_URL: process.env.OLLAMA_BASE_URL,
+	},
 
 	/**
 	 * Treat empty strings as undefined so that:

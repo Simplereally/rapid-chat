@@ -10,7 +10,9 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TestAiRouteImport } from './routes/test/ai'
 import { Route as ExampleShowcaseRouteImport } from './routes/example/showcase'
+import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AboutYouRouteImport } from './routes/about/you'
 import { Route as AboutTestRouteImport } from './routes/about/test'
 import { Route as AboutMeRouteImport } from './routes/about/me'
@@ -20,9 +22,19 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TestAiRoute = TestAiRouteImport.update({
+  id: '/test/ai',
+  path: '/test/ai',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ExampleShowcaseRoute = ExampleShowcaseRouteImport.update({
   id: '/example/showcase',
   path: '/example/showcase',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiChatRoute = ApiChatRouteImport.update({
+  id: '/api/chat',
+  path: '/api/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AboutYouRoute = AboutYouRouteImport.update({
@@ -46,14 +58,18 @@ export interface FileRoutesByFullPath {
   '/about/me': typeof AboutMeRoute
   '/about/test': typeof AboutTestRoute
   '/about/you': typeof AboutYouRoute
+  '/api/chat': typeof ApiChatRoute
   '/example/showcase': typeof ExampleShowcaseRoute
+  '/test/ai': typeof TestAiRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about/me': typeof AboutMeRoute
   '/about/test': typeof AboutTestRoute
   '/about/you': typeof AboutYouRoute
+  '/api/chat': typeof ApiChatRoute
   '/example/showcase': typeof ExampleShowcaseRoute
+  '/test/ai': typeof TestAiRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -61,7 +77,9 @@ export interface FileRoutesById {
   '/about/me': typeof AboutMeRoute
   '/about/test': typeof AboutTestRoute
   '/about/you': typeof AboutYouRoute
+  '/api/chat': typeof ApiChatRoute
   '/example/showcase': typeof ExampleShowcaseRoute
+  '/test/ai': typeof TestAiRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -70,16 +88,27 @@ export interface FileRouteTypes {
     | '/about/me'
     | '/about/test'
     | '/about/you'
+    | '/api/chat'
     | '/example/showcase'
+    | '/test/ai'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about/me' | '/about/test' | '/about/you' | '/example/showcase'
+  to:
+    | '/'
+    | '/about/me'
+    | '/about/test'
+    | '/about/you'
+    | '/api/chat'
+    | '/example/showcase'
+    | '/test/ai'
   id:
     | '__root__'
     | '/'
     | '/about/me'
     | '/about/test'
     | '/about/you'
+    | '/api/chat'
     | '/example/showcase'
+    | '/test/ai'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -87,7 +116,9 @@ export interface RootRouteChildren {
   AboutMeRoute: typeof AboutMeRoute
   AboutTestRoute: typeof AboutTestRoute
   AboutYouRoute: typeof AboutYouRoute
+  ApiChatRoute: typeof ApiChatRoute
   ExampleShowcaseRoute: typeof ExampleShowcaseRoute
+  TestAiRoute: typeof TestAiRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -99,11 +130,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/test/ai': {
+      id: '/test/ai'
+      path: '/test/ai'
+      fullPath: '/test/ai'
+      preLoaderRoute: typeof TestAiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/example/showcase': {
       id: '/example/showcase'
       path: '/example/showcase'
       fullPath: '/example/showcase'
       preLoaderRoute: typeof ExampleShowcaseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/chat': {
+      id: '/api/chat'
+      path: '/api/chat'
+      fullPath: '/api/chat'
+      preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/about/you': {
@@ -135,7 +180,9 @@ const rootRouteChildren: RootRouteChildren = {
   AboutMeRoute: AboutMeRoute,
   AboutTestRoute: AboutTestRoute,
   AboutYouRoute: AboutYouRoute,
+  ApiChatRoute: ApiChatRoute,
   ExampleShowcaseRoute: ExampleShowcaseRoute,
+  TestAiRoute: TestAiRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

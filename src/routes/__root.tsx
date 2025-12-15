@@ -2,6 +2,8 @@ import { TanStackDevtools } from "@tanstack/react-devtools";
 import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { env } from "@/env";
+import { ModeToggle } from "@/components/mode-toggle";
+import { ThemeProvider } from "@/components/theme-provider";
 import appCss from "../../app.css?url";
 import themeCss from "../../index.css?url";
 import AppConvexProvider from "../integrations/convex/provider";
@@ -44,27 +46,32 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 	const showDevtools = process.env.NODE_ENV !== "production";
 
 	return (
-		<html lang="en">
+		<html lang="en" suppressHydrationWarning>
 			<head>
 				<HeadContent />
 			</head>
 			<body>
-				<AppConvexProvider>
-					{children}
-					{showDevtools && (
-						<TanStackDevtools
-							config={{
-								position: "bottom-right",
-							}}
-							plugins={[
-								{
-									name: "Tanstack Router",
-									render: <TanStackRouterDevtoolsPanel />,
-								},
-							]}
-						/>
-					)}
-				</AppConvexProvider>
+				<ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+					<AppConvexProvider>
+						<div className="fixed top-4 right-4 z-50">
+							<ModeToggle />
+						</div>
+						{children}
+						{showDevtools && (
+							<TanStackDevtools
+								config={{
+									position: "bottom-right",
+								}}
+								plugins={[
+									{
+										name: "Tanstack Router",
+										render: <TanStackRouterDevtoolsPanel />,
+									},
+								]}
+							/>
+						)}
+					</AppConvexProvider>
+				</ThemeProvider>
 				<Scripts />
 			</body>
 		</html>
