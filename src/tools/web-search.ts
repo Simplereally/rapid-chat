@@ -9,7 +9,8 @@ import { tavily } from "@tavily/core";
 const webSearchInputSchema = z.object({
 	query: z.string().describe(
 		"The search query string. Be specific and concise. " +
-			"Use natural language questions or keyword phrases."
+			"Use natural language questions or keyword phrases." +
+            "If no time period is specified, prioritize the most recent information as of " + new Date().getFullYear() + "."
 	),
 });
 
