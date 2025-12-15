@@ -1,10 +1,10 @@
-import { defineConfig, type PluginOption } from 'vite'
+import { cloudflare } from '@cloudflare/vite-plugin'
+import tailwindcss from '@tailwindcss/vite'
 import { devtools } from '@tanstack/devtools-vite'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import viteReact from '@vitejs/plugin-react-swc'
+import { defineConfig, type PluginOption } from 'vite'
 import viteTsConfigPaths from 'vite-tsconfig-paths'
-import tailwindcss from '@tailwindcss/vite'
-import { cloudflare } from '@cloudflare/vite-plugin'
 
 export default defineConfig(({ command }) => {
   const isDev = command === 'serve'
@@ -25,5 +25,20 @@ export default defineConfig(({ command }) => {
 
   return {
     plugins,
+    optimizeDeps: {
+      include: ["@clerk/tanstack-react-start", "cookie-es"],
+    },
+    resolve: {
+      alias: [
+        {
+          find: "cookie",
+          replacement: "cookie-es",
+        },
+        {
+          find: "use-sync-external-store/shim/index.js",
+          replacement: "react",
+        },
+      ],
+    },
   }
 })

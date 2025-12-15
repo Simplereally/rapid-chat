@@ -11,6 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TestAiRouteImport } from './routes/test/ai'
+import { Route as SignUpSplatRouteImport } from './routes/sign-up.$'
+import { Route as SignInSplatRouteImport } from './routes/sign-in.$'
 import { Route as ExampleShowcaseRouteImport } from './routes/example/showcase'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AboutYouRouteImport } from './routes/about/you'
@@ -25,6 +27,16 @@ const IndexRoute = IndexRouteImport.update({
 const TestAiRoute = TestAiRouteImport.update({
   id: '/test/ai',
   path: '/test/ai',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignUpSplatRoute = SignUpSplatRouteImport.update({
+  id: '/sign-up/$',
+  path: '/sign-up/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignInSplatRoute = SignInSplatRouteImport.update({
+  id: '/sign-in/$',
+  path: '/sign-in/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ExampleShowcaseRoute = ExampleShowcaseRouteImport.update({
@@ -60,6 +72,8 @@ export interface FileRoutesByFullPath {
   '/about/you': typeof AboutYouRoute
   '/api/chat': typeof ApiChatRoute
   '/example/showcase': typeof ExampleShowcaseRoute
+  '/sign-in/$': typeof SignInSplatRoute
+  '/sign-up/$': typeof SignUpSplatRoute
   '/test/ai': typeof TestAiRoute
 }
 export interface FileRoutesByTo {
@@ -69,6 +83,8 @@ export interface FileRoutesByTo {
   '/about/you': typeof AboutYouRoute
   '/api/chat': typeof ApiChatRoute
   '/example/showcase': typeof ExampleShowcaseRoute
+  '/sign-in/$': typeof SignInSplatRoute
+  '/sign-up/$': typeof SignUpSplatRoute
   '/test/ai': typeof TestAiRoute
 }
 export interface FileRoutesById {
@@ -79,6 +95,8 @@ export interface FileRoutesById {
   '/about/you': typeof AboutYouRoute
   '/api/chat': typeof ApiChatRoute
   '/example/showcase': typeof ExampleShowcaseRoute
+  '/sign-in/$': typeof SignInSplatRoute
+  '/sign-up/$': typeof SignUpSplatRoute
   '/test/ai': typeof TestAiRoute
 }
 export interface FileRouteTypes {
@@ -90,6 +108,8 @@ export interface FileRouteTypes {
     | '/about/you'
     | '/api/chat'
     | '/example/showcase'
+    | '/sign-in/$'
+    | '/sign-up/$'
     | '/test/ai'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -99,6 +119,8 @@ export interface FileRouteTypes {
     | '/about/you'
     | '/api/chat'
     | '/example/showcase'
+    | '/sign-in/$'
+    | '/sign-up/$'
     | '/test/ai'
   id:
     | '__root__'
@@ -108,6 +130,8 @@ export interface FileRouteTypes {
     | '/about/you'
     | '/api/chat'
     | '/example/showcase'
+    | '/sign-in/$'
+    | '/sign-up/$'
     | '/test/ai'
   fileRoutesById: FileRoutesById
 }
@@ -118,6 +142,8 @@ export interface RootRouteChildren {
   AboutYouRoute: typeof AboutYouRoute
   ApiChatRoute: typeof ApiChatRoute
   ExampleShowcaseRoute: typeof ExampleShowcaseRoute
+  SignInSplatRoute: typeof SignInSplatRoute
+  SignUpSplatRoute: typeof SignUpSplatRoute
   TestAiRoute: typeof TestAiRoute
 }
 
@@ -135,6 +161,20 @@ declare module '@tanstack/react-router' {
       path: '/test/ai'
       fullPath: '/test/ai'
       preLoaderRoute: typeof TestAiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sign-up/$': {
+      id: '/sign-up/$'
+      path: '/sign-up/$'
+      fullPath: '/sign-up/$'
+      preLoaderRoute: typeof SignUpSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sign-in/$': {
+      id: '/sign-in/$'
+      path: '/sign-in/$'
+      fullPath: '/sign-in/$'
+      preLoaderRoute: typeof SignInSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/example/showcase': {
@@ -182,6 +222,8 @@ const rootRouteChildren: RootRouteChildren = {
   AboutYouRoute: AboutYouRoute,
   ApiChatRoute: ApiChatRoute,
   ExampleShowcaseRoute: ExampleShowcaseRoute,
+  SignInSplatRoute: SignInSplatRoute,
+  SignUpSplatRoute: SignUpSplatRoute,
   TestAiRoute: TestAiRoute,
 }
 export const routeTree = rootRouteImport
@@ -189,10 +231,11 @@ export const routeTree = rootRouteImport
   ._addFileTypes<FileRouteTypes>()
 
 import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
+import type { startInstance } from './start.ts'
 declare module '@tanstack/react-start' {
   interface Register {
     ssr: true
     router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
   }
 }
