@@ -110,17 +110,22 @@ export const Route = createFileRoute("/api/chat")({
 
 							yield chunk;
 
-							// Throttle DB updates
+							// Throttle DB updates - fire-and-forget to avoid blocking the stream
+							// This is critical for smooth streaming UX
 							if (Date.now() - lastUpdate > updateInterval) {
-								await convex.mutation(api.messages.update, {
+								const contentSnapshot = fullContent;
+								// Don't await - let it run in the background
+								convex.mutation(api.messages.update, {
 									messageId,
-									content: fullContent,
+									content: contentSnapshot,
+								}).catch((err) => {
+									console.error("Background DB update failed:", err);
 								});
 								lastUpdate = Date.now();
 							}
 						}
 
-						// Final update to ensure consistency
+						// Final update MUST be awaited to ensure consistency
 						await convex.mutation(api.messages.update, {
 							messageId,
 							content: fullContent,

@@ -9,6 +9,7 @@ export const env = createEnv({
 	server: {
 		OLLAMA_MODEL: z.string().min(1),
 		OLLAMA_BASE_URL: z.string().url().optional(),
+		CLERK_SECRET_KEY: z.string().min(1),
 	},
 
 	/**
@@ -20,7 +21,8 @@ export const env = createEnv({
 	client: {
 		VITE_CONVEX_URL: z.url(),
 		VITE_APP_TITLE: z.string().min(1),
-		VITE_TANSTACK_DEVTOOLS: z.string().optional().default("true"),
+		VITE_TANSTACK_DEVTOOLS: z.string(),
+		VITE_CLERK_PUBLISHABLE_KEY: z.string().min(1),
 	},
 
 	/**
@@ -30,8 +32,10 @@ export const env = createEnv({
 	runtimeEnv: {
 		...import.meta.env,
 		VITE_TANSTACK_DEVTOOLS: import.meta.env.VITE_TANSTACK_DEVTOOLS,
+		VITE_CLERK_PUBLISHABLE_KEY: import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
 		OLLAMA_MODEL: process.env.OLLAMA_MODEL,
 		OLLAMA_BASE_URL: process.env.OLLAMA_BASE_URL,
+		CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY,
 	},
 
 	/**
