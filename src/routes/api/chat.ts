@@ -59,7 +59,7 @@ export const Route = createFileRoute("/api/chat")({
 					convex.setAuth(token);
 
 					// 1. Create a placeholder assistant message in message DB
-					const messageId = await convex.mutation(api.messages.add, {
+					const { messageId } = await convex.mutation(api.messages.add, {
 						threadId: threadId as Id<"threads">,
 						role: "assistant",
 						content: "",

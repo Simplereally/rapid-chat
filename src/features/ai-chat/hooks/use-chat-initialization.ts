@@ -2,14 +2,7 @@ import { useMutation } from "convex/react";
 import { useEffect, useRef } from "react";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
-
-// Re-thinking: The hook needs to navigate too.
-// Let's importing the Route object might be circular or messy if the hook is in `features`.
-// Best pattern: Pass `initialInput` and a `clearInitialInput` callback?
-// Or just let the hook implementation import the `Route`? No, `features` shouldn't depend on `routes`.
-// Better: Pass `initialInput` value and a function to clear it.
-
-// Actually `append` from useChat takes specific types.
+import { triggerTitleGeneration } from "../lib/title-generation";
 
 export function useChatInitializationLogic({
 	threadId,
@@ -17,6 +10,7 @@ export function useChatInitializationLogic({
 	clearInitialInput,
 	append,
 	isTokenLoaded,
+	getToken,
 }: {
 	threadId: string;
 	initialInput?: string;
@@ -26,6 +20,7 @@ export function useChatInitializationLogic({
 		content: string;
 	}) => Promise<string | null | undefined | void>;
 	isTokenLoaded: boolean;
+	getToken: () => Promise<string | null>;
 }) {
 	const addMessage = useMutation(api.messages.add);
 	const hasTriggeredInitial = useRef(false);
@@ -36,19 +31,29 @@ export function useChatInitializationLogic({
 
 			const run = async () => {
 				// 1. Save to Convex
-				await addMessage({
+				const { isFirstMessage } = await addMessage({
 					threadId: threadId as Id<"threads">,
 					role: "user",
 					content: initialInput,
 				});
 
-				// 2. Trigger AI
+				// 2. Trigger AI title generation if this is the first message
+				// Fire-and-forget: don't await, don't block the chat
+				if (isFirstMessage) {
+					getToken().then((token) => {
+						if (token) {
+							triggerTitleGeneration(threadId, initialInput, token);
+						}
+					});
+				}
+
+				// 3. Trigger AI
 				await append({
 					role: "user",
 					content: initialInput,
 				});
 
-				// 3. Clear URL param
+				// 4. Clear URL param
 				clearInitialInput();
 			};
 
@@ -61,5 +66,6 @@ export function useChatInitializationLogic({
 		append,
 		threadId,
 		clearInitialInput,
+		getToken,
 	]);
 }

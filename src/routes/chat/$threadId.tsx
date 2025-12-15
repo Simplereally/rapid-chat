@@ -1,3 +1,4 @@
+import { useAuth } from "@clerk/tanstack-react-start";
 import {
 	BLINK_ANIMATION_CSS,
 	ChatHeader,
@@ -36,6 +37,7 @@ export const Route = createFileRoute("/chat/$threadId")({
 function ChatThreadPage() {
 	const { threadId } = Route.useParams();
 	const navigate = useNavigate();
+	const { getToken } = useAuth();
 
 	// 1. Thread Metadata (for title)
 	const thread = useQuery(api.threads.get, {
@@ -70,6 +72,7 @@ function ChatThreadPage() {
 		append,
 		setStreamingMessages,
 		isLoading,
+		getToken: () => getToken({ template: "convex" }),
 	});
 
 	const { scrollViewportRef } = useChatScroll(parsedMessages, isLoading);
@@ -86,6 +89,7 @@ function ChatThreadPage() {
 			}),
 		append,
 		isTokenLoaded,
+		getToken: () => getToken({ template: "convex" }),
 	});
 
 	// Quick fix for the adapter:

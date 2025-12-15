@@ -1,8 +1,9 @@
 import type { UIMessage } from "@tanstack/ai-react";
 import { useMutation } from "convex/react";
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
+import { triggerTitleGeneration } from "../lib/title-generation";
 
 interface UseChatActionsProps {
 	threadId: string;
@@ -14,6 +15,7 @@ interface UseChatActionsProps {
 	}) => Promise<string | null | undefined | void>;
 	setStreamingMessages: (messages: UIMessage[]) => void;
 	isLoading: boolean;
+	getToken: () => Promise<string | null>;
 }
 
 export function useChatActions({
@@ -23,9 +25,13 @@ export function useChatActions({
 	append,
 	setStreamingMessages,
 	isLoading,
+	getToken,
 }: UseChatActionsProps) {
 	const addMessage = useMutation(api.messages.add);
 	const clearThreadMessages = useMutation(api.messages.clearThread);
+	
+	// Track if we've already triggered title generation for this thread
+	const titleGeneratedRef = useRef(false);
 
 	const handleSubmit = async (e: React.FormEvent, chatInput: string) => {
 		e.preventDefault();
@@ -35,14 +41,24 @@ export function useChatActions({
 		const fullContent = thinkPrefix + chatInput;
 
 		// 1. Save User Message to Convex (Persistence)
-		// We do this concurrently.
-		addMessage({
+		const { isFirstMessage } = await addMessage({
 			threadId: threadId as Id<"threads">,
 			role: "user",
 			content: fullContent,
 		});
 
-		// 2. Trigger Stream
+		// 2. Trigger AI title generation if this is the first message
+		// Fire-and-forget: don't await, don't block the chat
+		if (isFirstMessage && !titleGeneratedRef.current) {
+			titleGeneratedRef.current = true;
+			getToken().then((token) => {
+				if (token) {
+					triggerTitleGeneration(threadId, fullContent, token);
+				}
+			});
+		}
+
+		// 3. Trigger Stream
 		await append({
 			role: "user",
 			content: fullContent,
@@ -55,6 +71,8 @@ export function useChatActions({
 		if (isLoading) return;
 		await clearThreadMessages({ threadId: threadId as Id<"threads"> });
 		setStreamingMessages([]);
+		// Reset title generation flag when conversation is cleared
+		titleGeneratedRef.current = false;
 	}, [isLoading, clearThreadMessages, threadId, setStreamingMessages]);
 
 	return {

@@ -42,7 +42,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
 	Sidebar,
 	SidebarContent,
@@ -187,106 +186,101 @@ export function ChatSidebar() {
 				</SidebarHeader>
 
 				<SidebarContent>
-					<ScrollArea className="h-full">
-						{threads === undefined ? (
-							// Loading state
-							<SidebarGroup>
-								<SidebarGroupContent>
-									<SidebarMenu>
-										{["a", "b", "c", "d", "e"].map((id) => (
-											<SidebarMenuItem key={`skeleton-${id}`}>
-												<SidebarMenuSkeleton showIcon />
-											</SidebarMenuItem>
-										))}
-									</SidebarMenu>
-								</SidebarGroupContent>
-							</SidebarGroup>
-						) : threads.length === 0 ? (
-							// Empty state
-							<div className="flex flex-col items-center justify-center px-4 py-12 text-center">
-								<div className="rounded-full bg-muted p-3 mb-3">
-									<MessageSquare className="h-6 w-6 text-muted-foreground" />
-								</div>
-								<p className="text-sm font-medium text-foreground">
-									No conversations yet
-								</p>
-								<p className="text-xs text-muted-foreground mt-1">
-									Start a new chat to begin
-								</p>
-							</div>
-						) : (
-							// Thread groups
-							groupedThreads.map((group) => (
-								<SidebarGroup key={group.label}>
-									<SidebarGroupLabel className="text-xs text-muted-foreground/70 px-2">
-										{group.label}
-									</SidebarGroupLabel>
-									<SidebarGroupContent>
-										<SidebarMenu>
-											{group.threads.map((thread) => (
-												<SidebarMenuItem key={thread._id}>
-													<SidebarMenuButton
-														asChild
-														isActive={currentThreadId === thread._id}
-														className={cn(
-															"group/item transition-colors",
-															currentThreadId === thread._id &&
-																"bg-accent text-accent-foreground",
-														)}
+				{threads === undefined ? (
+					// Loading state
+					<SidebarGroup>
+						<SidebarGroupContent>
+							<SidebarMenu>
+								{["a", "b", "c", "d", "e"].map((id) => (
+									<SidebarMenuItem key={`skeleton-${id}`}>
+										<SidebarMenuSkeleton showIcon />
+									</SidebarMenuItem>
+								))}
+							</SidebarMenu>
+						</SidebarGroupContent>
+					</SidebarGroup>
+				) : threads.length === 0 ? (
+					// Empty state
+					<div className="flex flex-col items-center justify-center px-4 py-12 text-center">
+						<div className="rounded-full bg-muted p-3 mb-3">
+							<MessageSquare className="h-6 w-6 text-muted-foreground" />
+						</div>
+						<p className="text-sm font-medium text-foreground">
+							No conversations yet
+						</p>
+						<p className="text-xs text-muted-foreground mt-1">
+							Start a new chat to begin
+						</p>
+					</div>
+				) : (
+					// Thread groups
+					groupedThreads.map((group) => (
+						<SidebarGroup key={group.label}>
+							<SidebarGroupLabel className="text-xs text-muted-foreground/70 px-2">
+								{group.label}
+							</SidebarGroupLabel>
+							<SidebarGroupContent>
+								<SidebarMenu>
+									{group.threads.map((thread) => (
+										<SidebarMenuItem key={thread._id}>
+											<SidebarMenuButton
+												asChild
+												isActive={currentThreadId === thread._id}
+												className={cn(
+													"transition-colors pr-8",
+													currentThreadId === thread._id &&
+														"bg-accent text-accent-foreground",
+												)}
+											>
+												<Link
+													to="/chat/$threadId"
+													params={{ threadId: thread._id }}
+													search={{
+														initialInput: undefined,
+														initialThinking: undefined,
+													}}
+													onClick={handleThreadClick}
+													className="flex items-center gap-2 overflow-hidden min-w-0"
+												>
+													<MessageSquare className="h-4 w-4 shrink-0 opacity-60" />
+													<span className="truncate flex-1 min-w-0">
+														{thread.title}
+													</span>
+												</Link>
+											</SidebarMenuButton>
+											<DropdownMenu>
+												<DropdownMenuTrigger asChild>
+													<SidebarMenuAction showOnHover>
+														<MoreHorizontal className="h-4 w-4" />
+														<span className="sr-only">More options</span>
+													</SidebarMenuAction>
+												</DropdownMenuTrigger>
+												<DropdownMenuContent side="right" align="start">
+													<DropdownMenuItem
+														onClick={() =>
+															openRenameDialog(thread._id, thread.title)
+														}
 													>
-														<Link
-															to="/chat/$threadId"
-															params={{ threadId: thread._id }}
-															search={{
-																initialInput: undefined,
-																initialThinking: undefined,
-															}}
-															onClick={handleThreadClick}
-															className="flex items-center gap-2"
-														>
-															<MessageSquare className="h-4 w-4 shrink-0 opacity-60" />
-															<span className="truncate flex-1">
-																{thread.title}
-															</span>
-														</Link>
-													</SidebarMenuButton>
-													<DropdownMenu>
-														<DropdownMenuTrigger asChild>
-															<SidebarMenuAction
-																showOnHover
-																className="opacity-0 group-hover/item:opacity-100 transition-opacity"
-															>
-																<MoreHorizontal className="h-4 w-4" />
-																<span className="sr-only">More options</span>
-															</SidebarMenuAction>
-														</DropdownMenuTrigger>
-														<DropdownMenuContent side="right" align="start">
-															<DropdownMenuItem
-																onClick={() =>
-																	openRenameDialog(thread._id, thread.title)
-																}
-															>
-																<Pencil className="h-4 w-4 mr-2" />
-																Rename
-															</DropdownMenuItem>
-															<DropdownMenuItem
-																onClick={() => setThreadToDelete(thread._id)}
-																className="text-destructive focus:text-destructive"
-															>
-																<Trash2 className="h-4 w-4 mr-2" />
-																Delete
-															</DropdownMenuItem>
-														</DropdownMenuContent>
-													</DropdownMenu>
-												</SidebarMenuItem>
-											))}
-										</SidebarMenu>
-									</SidebarGroupContent>
-								</SidebarGroup>
-							))
-						)}
-					</ScrollArea>
-				</SidebarContent>
+														<Pencil className="h-4 w-4 mr-2" />
+														Rename
+													</DropdownMenuItem>
+													<DropdownMenuItem
+														onClick={() => setThreadToDelete(thread._id)}
+														className="text-destructive focus:text-destructive"
+													>
+														<Trash2 className="h-4 w-4 mr-2" />
+														Delete
+													</DropdownMenuItem>
+												</DropdownMenuContent>
+											</DropdownMenu>
+										</SidebarMenuItem>
+									))}
+								</SidebarMenu>
+							</SidebarGroupContent>
+						</SidebarGroup>
+					))
+				)}
+			</SidebarContent>
 
 				<SidebarFooter className="border-t border-border/50 p-4">
 					<DropdownMenu>

@@ -16,6 +16,7 @@ import { Route as SignUpSplatRouteImport } from './routes/sign-up.$'
 import { Route as SignInSplatRouteImport } from './routes/sign-in.$'
 import { Route as ExampleShowcaseRouteImport } from './routes/example/showcase'
 import { Route as ChatThreadIdRouteImport } from './routes/chat/$threadId'
+import { Route as ApiGenerateTitleRouteImport } from './routes/api/generate-title'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AboutYouRouteImport } from './routes/about/you'
 import { Route as AboutTestRouteImport } from './routes/about/test'
@@ -56,6 +57,11 @@ const ChatThreadIdRoute = ChatThreadIdRouteImport.update({
   path: '/$threadId',
   getParentRoute: () => ChatRoute,
 } as any)
+const ApiGenerateTitleRoute = ApiGenerateTitleRouteImport.update({
+  id: '/api/generate-title',
+  path: '/api/generate-title',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
@@ -84,6 +90,7 @@ export interface FileRoutesByFullPath {
   '/about/test': typeof AboutTestRoute
   '/about/you': typeof AboutYouRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/generate-title': typeof ApiGenerateTitleRoute
   '/chat/$threadId': typeof ChatThreadIdRoute
   '/example/showcase': typeof ExampleShowcaseRoute
   '/sign-in/$': typeof SignInSplatRoute
@@ -96,6 +103,7 @@ export interface FileRoutesByTo {
   '/about/test': typeof AboutTestRoute
   '/about/you': typeof AboutYouRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/generate-title': typeof ApiGenerateTitleRoute
   '/chat/$threadId': typeof ChatThreadIdRoute
   '/example/showcase': typeof ExampleShowcaseRoute
   '/sign-in/$': typeof SignInSplatRoute
@@ -110,6 +118,7 @@ export interface FileRoutesById {
   '/about/test': typeof AboutTestRoute
   '/about/you': typeof AboutYouRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/generate-title': typeof ApiGenerateTitleRoute
   '/chat/$threadId': typeof ChatThreadIdRoute
   '/example/showcase': typeof ExampleShowcaseRoute
   '/sign-in/$': typeof SignInSplatRoute
@@ -125,6 +134,7 @@ export interface FileRouteTypes {
     | '/about/test'
     | '/about/you'
     | '/api/chat'
+    | '/api/generate-title'
     | '/chat/$threadId'
     | '/example/showcase'
     | '/sign-in/$'
@@ -137,6 +147,7 @@ export interface FileRouteTypes {
     | '/about/test'
     | '/about/you'
     | '/api/chat'
+    | '/api/generate-title'
     | '/chat/$threadId'
     | '/example/showcase'
     | '/sign-in/$'
@@ -150,6 +161,7 @@ export interface FileRouteTypes {
     | '/about/test'
     | '/about/you'
     | '/api/chat'
+    | '/api/generate-title'
     | '/chat/$threadId'
     | '/example/showcase'
     | '/sign-in/$'
@@ -164,6 +176,7 @@ export interface RootRouteChildren {
   AboutTestRoute: typeof AboutTestRoute
   AboutYouRoute: typeof AboutYouRoute
   ApiChatRoute: typeof ApiChatRoute
+  ApiGenerateTitleRoute: typeof ApiGenerateTitleRoute
   ExampleShowcaseRoute: typeof ExampleShowcaseRoute
   SignInSplatRoute: typeof SignInSplatRoute
   SignUpSplatRoute: typeof SignUpSplatRoute
@@ -220,6 +233,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChatThreadIdRouteImport
       parentRoute: typeof ChatRoute
     }
+    '/api/generate-title': {
+      id: '/api/generate-title'
+      path: '/api/generate-title'
+      fullPath: '/api/generate-title'
+      preLoaderRoute: typeof ApiGenerateTitleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/chat': {
       id: '/api/chat'
       path: '/api/chat'
@@ -270,6 +290,7 @@ const rootRouteChildren: RootRouteChildren = {
   AboutTestRoute: AboutTestRoute,
   AboutYouRoute: AboutYouRoute,
   ApiChatRoute: ApiChatRoute,
+  ApiGenerateTitleRoute: ApiGenerateTitleRoute,
   ExampleShowcaseRoute: ExampleShowcaseRoute,
   SignInSplatRoute: SignInSplatRoute,
   SignUpSplatRoute: SignUpSplatRoute,

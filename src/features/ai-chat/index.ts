@@ -17,6 +17,8 @@ export {
   BLINK_ANIMATION_CSS,
 } from './lib/chat-utils'
 
+export { triggerTitleGeneration } from './lib/title-generation'
+
 // Types
 export type {
   ParsedMessage,

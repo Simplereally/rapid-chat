@@ -66,21 +66,19 @@ export const add = mutation({
 		// Update thread's timestamps
 		await ctx.db.patch(args.threadId, patch);
 
-		// If this is the first user message, use it to generate a title
+		// Check if this is the first user message (for AI title generation)
+		let isFirstMessage = false;
 		if (args.role === "user") {
 			const existingMessages = await ctx.db
 				.query("messages")
 				.withIndex("by_thread", (q) => q.eq("threadId", args.threadId))
 				.collect();
 
-			// If this is the first message (just inserted), update the title
-			if (existingMessages.length === 1) {
-				const title = args.content.slice(0, 50) + (args.content.length > 50 ? "..." : "");
-				await ctx.db.patch(args.threadId, { title });
-			}
+			// If this is the first message (just inserted), flag it
+			isFirstMessage = existingMessages.length === 1;
 		}
 
-		return messageId;
+		return { messageId, isFirstMessage };
 	},
 });
 
