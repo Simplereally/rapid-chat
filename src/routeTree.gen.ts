@@ -9,25 +9,32 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ChatRouteImport } from './routes/chat'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as TestAiRouteImport } from './routes/test/ai'
+import { Route as ChatIndexRouteImport } from './routes/chat/index'
 import { Route as SignUpSplatRouteImport } from './routes/sign-up.$'
 import { Route as SignInSplatRouteImport } from './routes/sign-in.$'
 import { Route as ExampleShowcaseRouteImport } from './routes/example/showcase'
+import { Route as ChatThreadIdRouteImport } from './routes/chat/$threadId'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AboutYouRouteImport } from './routes/about/you'
 import { Route as AboutTestRouteImport } from './routes/about/test'
 import { Route as AboutMeRouteImport } from './routes/about/me'
 
+const ChatRoute = ChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TestAiRoute = TestAiRouteImport.update({
-  id: '/test/ai',
-  path: '/test/ai',
-  getParentRoute: () => rootRouteImport,
+const ChatIndexRoute = ChatIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ChatRoute,
 } as any)
 const SignUpSplatRoute = SignUpSplatRouteImport.update({
   id: '/sign-up/$',
@@ -43,6 +50,11 @@ const ExampleShowcaseRoute = ExampleShowcaseRouteImport.update({
   id: '/example/showcase',
   path: '/example/showcase',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ChatThreadIdRoute = ChatThreadIdRouteImport.update({
+  id: '/$threadId',
+  path: '/$threadId',
+  getParentRoute: () => ChatRoute,
 } as any)
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
@@ -67,14 +79,16 @@ const AboutMeRoute = AboutMeRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/chat': typeof ChatRouteWithChildren
   '/about/me': typeof AboutMeRoute
   '/about/test': typeof AboutTestRoute
   '/about/you': typeof AboutYouRoute
   '/api/chat': typeof ApiChatRoute
+  '/chat/$threadId': typeof ChatThreadIdRoute
   '/example/showcase': typeof ExampleShowcaseRoute
   '/sign-in/$': typeof SignInSplatRoute
   '/sign-up/$': typeof SignUpSplatRoute
-  '/test/ai': typeof TestAiRoute
+  '/chat/': typeof ChatIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -82,35 +96,40 @@ export interface FileRoutesByTo {
   '/about/test': typeof AboutTestRoute
   '/about/you': typeof AboutYouRoute
   '/api/chat': typeof ApiChatRoute
+  '/chat/$threadId': typeof ChatThreadIdRoute
   '/example/showcase': typeof ExampleShowcaseRoute
   '/sign-in/$': typeof SignInSplatRoute
   '/sign-up/$': typeof SignUpSplatRoute
-  '/test/ai': typeof TestAiRoute
+  '/chat': typeof ChatIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/chat': typeof ChatRouteWithChildren
   '/about/me': typeof AboutMeRoute
   '/about/test': typeof AboutTestRoute
   '/about/you': typeof AboutYouRoute
   '/api/chat': typeof ApiChatRoute
+  '/chat/$threadId': typeof ChatThreadIdRoute
   '/example/showcase': typeof ExampleShowcaseRoute
   '/sign-in/$': typeof SignInSplatRoute
   '/sign-up/$': typeof SignUpSplatRoute
-  '/test/ai': typeof TestAiRoute
+  '/chat/': typeof ChatIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/chat'
     | '/about/me'
     | '/about/test'
     | '/about/you'
     | '/api/chat'
+    | '/chat/$threadId'
     | '/example/showcase'
     | '/sign-in/$'
     | '/sign-up/$'
-    | '/test/ai'
+    | '/chat/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -118,25 +137,29 @@ export interface FileRouteTypes {
     | '/about/test'
     | '/about/you'
     | '/api/chat'
+    | '/chat/$threadId'
     | '/example/showcase'
     | '/sign-in/$'
     | '/sign-up/$'
-    | '/test/ai'
+    | '/chat'
   id:
     | '__root__'
     | '/'
+    | '/chat'
     | '/about/me'
     | '/about/test'
     | '/about/you'
     | '/api/chat'
+    | '/chat/$threadId'
     | '/example/showcase'
     | '/sign-in/$'
     | '/sign-up/$'
-    | '/test/ai'
+    | '/chat/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ChatRoute: typeof ChatRouteWithChildren
   AboutMeRoute: typeof AboutMeRoute
   AboutTestRoute: typeof AboutTestRoute
   AboutYouRoute: typeof AboutYouRoute
@@ -144,11 +167,17 @@ export interface RootRouteChildren {
   ExampleShowcaseRoute: typeof ExampleShowcaseRoute
   SignInSplatRoute: typeof SignInSplatRoute
   SignUpSplatRoute: typeof SignUpSplatRoute
-  TestAiRoute: typeof TestAiRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/chat': {
+      id: '/chat'
+      path: '/chat'
+      fullPath: '/chat'
+      preLoaderRoute: typeof ChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -156,12 +185,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/test/ai': {
-      id: '/test/ai'
-      path: '/test/ai'
-      fullPath: '/test/ai'
-      preLoaderRoute: typeof TestAiRouteImport
-      parentRoute: typeof rootRouteImport
+    '/chat/': {
+      id: '/chat/'
+      path: '/'
+      fullPath: '/chat/'
+      preLoaderRoute: typeof ChatIndexRouteImport
+      parentRoute: typeof ChatRoute
     }
     '/sign-up/$': {
       id: '/sign-up/$'
@@ -183,6 +212,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/example/showcase'
       preLoaderRoute: typeof ExampleShowcaseRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/chat/$threadId': {
+      id: '/chat/$threadId'
+      path: '/$threadId'
+      fullPath: '/chat/$threadId'
+      preLoaderRoute: typeof ChatThreadIdRouteImport
+      parentRoute: typeof ChatRoute
     }
     '/api/chat': {
       id: '/api/chat'
@@ -215,8 +251,21 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface ChatRouteChildren {
+  ChatThreadIdRoute: typeof ChatThreadIdRoute
+  ChatIndexRoute: typeof ChatIndexRoute
+}
+
+const ChatRouteChildren: ChatRouteChildren = {
+  ChatThreadIdRoute: ChatThreadIdRoute,
+  ChatIndexRoute: ChatIndexRoute,
+}
+
+const ChatRouteWithChildren = ChatRoute._addFileChildren(ChatRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ChatRoute: ChatRouteWithChildren,
   AboutMeRoute: AboutMeRoute,
   AboutTestRoute: AboutTestRoute,
   AboutYouRoute: AboutYouRoute,
@@ -224,7 +273,6 @@ const rootRouteChildren: RootRouteChildren = {
   ExampleShowcaseRoute: ExampleShowcaseRoute,
   SignInSplatRoute: SignInSplatRoute,
   SignUpSplatRoute: SignUpSplatRoute,
-  TestAiRoute: TestAiRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

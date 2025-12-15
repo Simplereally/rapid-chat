@@ -2,7 +2,6 @@ import { ModeToggle } from "@/components/mode-toggle";
 import { ThemeProvider } from "@/components/theme-provider";
 import { env } from "@/env";
 import { ClerkProvider, useAuth } from "@clerk/tanstack-react-start";
-import { auth } from "@clerk/tanstack-react-start/server";
 import type { ConvexQueryClient } from "@convex-dev/react-query";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -15,24 +14,13 @@ import {
 	useRouteContext,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
-import { createServerFn } from "@tanstack/react-start";
 import type { ConvexReactClient } from "convex/react";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
 import appCss from "../../app.css?url";
 import themeCss from "../../index.css?url";
 import baseCss from "../styles.css?url";
 
-// Server function to fetch Clerk auth and get Convex token
-// The auth() function uses the global context set by clerkMiddleware
-const fetchClerkAuth = createServerFn({ method: "GET" }).handler(async () => {
-	const authState = await auth();
-	const token = await authState.getToken({ template: "convex" });
-	return {
-		userId: authState.userId,
-		token,
-		isAuthenticated: !!authState.userId,
-	};
-});
+import { fetchClerkAuth } from "./__root.server";
 
 export const Route = createRootRouteWithContext<{
 	queryClient: QueryClient;
@@ -54,6 +42,19 @@ export const Route = createRootRouteWithContext<{
 		],
 		links: [
 			{
+				rel: "preconnect",
+				href: "https://fonts.googleapis.com",
+			},
+			{
+				rel: "preconnect",
+				href: "https://fonts.gstatic.com",
+				crossOrigin: "anonymous",
+			},
+			{
+				rel: "stylesheet",
+				href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
+			},
+			{
 				rel: "stylesheet",
 				href: baseCss,
 			},
@@ -69,30 +70,32 @@ export const Route = createRootRouteWithContext<{
 	}),
 
 	beforeLoad: async (ctx) => {
-		// Don't check auth for sign-in/sign-up routes
+		// Always fetch auth state to ensure correct redirects
+		const { userId, token, isAuthenticated } = await fetchClerkAuth();
+
 		const publicPaths = ["/sign-in", "/sign-up"];
 		const isPublicPath = publicPaths.some((path) =>
 			ctx.location.pathname.startsWith(path),
 		);
 
-		if (isPublicPath) {
-			return { userId: null, token: null, isAuthenticated: false };
+		// If authenticated and trying to access sign-in/sign-up, redirect to home
+		if (isAuthenticated && isPublicPath) {
+			throw redirect({
+				to: "/",
+			});
 		}
 
-		// Fetch auth state from Clerk with proper request context
-		const { userId, token, isAuthenticated } = await fetchClerkAuth();
+		// If not authenticated and trying to access a protected route, redirect to sign-in
+		if (!isAuthenticated && !isPublicPath) {
+			throw redirect({
+				to: "/sign-in/$",
+			});
+		}
 
 		// During SSR only (the only time serverHttpClient exists),
 		// set the Clerk auth token to make HTTP queries with.
 		if (token) {
 			ctx.context.convexQueryClient.serverHttpClient?.setAuth(token);
-		}
-
-		// If not authenticated and not on a public path, redirect to sign-in
-		if (!isAuthenticated) {
-			throw redirect({
-				to: "/sign-in/$",
-			});
 		}
 
 		return { userId, token, isAuthenticated };
@@ -118,7 +121,9 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-	const showDevtools = process.env.NODE_ENV !== "production";
+	const showDevtools =
+		process.env.NODE_ENV !== "production" &&
+		env.VITE_TANSTACK_DEVTOOLS === "true";
 
 	return (
 		<html lang="en" suppressHydrationWarning>

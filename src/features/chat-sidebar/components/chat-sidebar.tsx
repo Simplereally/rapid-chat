@@ -1,0 +1,420 @@
+"use client";
+
+import { useClerk, useUser } from "@clerk/tanstack-react-start";
+import { Link, useNavigate, useParams } from "@tanstack/react-router";
+import { useMutation, useQuery } from "convex/react";
+import {
+	Loader2,
+	LogOut,
+	MessageSquare,
+	MessageSquarePlus,
+	MoreHorizontal,
+	Pencil,
+	Trash2,
+} from "lucide-react";
+import { useState } from "react";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+	Sidebar,
+	SidebarContent,
+	SidebarFooter,
+	SidebarGroup,
+	SidebarGroupContent,
+	SidebarGroupLabel,
+	SidebarHeader,
+	SidebarMenu,
+	SidebarMenuAction,
+	SidebarMenuButton,
+	SidebarMenuItem,
+	SidebarMenuSkeleton,
+	useSidebar,
+} from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
+import { api } from "../../../../convex/_generated/api";
+import type { Id } from "../../../../convex/_generated/dataModel";
+
+export function ChatSidebar() {
+	const threads = useQuery(api.threads.list);
+	const createThread = useMutation(api.threads.create);
+	const deleteThread = useMutation(api.threads.remove);
+	const updateThreadTitle = useMutation(api.threads.updateTitle);
+	const navigate = useNavigate();
+	const params = useParams({ strict: false });
+	const { isMobile, setOpenMobile } = useSidebar();
+	const [threadToDelete, setThreadToDelete] = useState<Id<"threads"> | null>(
+		null,
+	);
+	const [threadToRename, setThreadToRename] = useState<Id<"threads"> | null>(
+		null,
+	);
+	const [renameTitle, setRenameTitle] = useState("");
+	const [isCreating, setIsCreating] = useState(false);
+	const { signOut } = useClerk();
+	const { user } = useUser();
+
+	const currentThreadId = params.threadId as Id<"threads"> | undefined;
+
+	const handleNewChat = async () => {
+		setIsCreating(true);
+		try {
+			const threadId = await createThread({});
+			if (isMobile) {
+				setOpenMobile(false);
+			}
+			navigate({
+				to: "/chat/$threadId",
+				params: { threadId },
+				search: { initialInput: undefined, initialThinking: undefined },
+			});
+		} finally {
+			setIsCreating(false);
+		}
+	};
+
+	const handleDeleteThread = async () => {
+		if (!threadToDelete) return;
+
+		await deleteThread({ threadId: threadToDelete });
+		setThreadToDelete(null);
+
+		// If we deleted the current thread, navigate to new chat
+		if (currentThreadId === threadToDelete) {
+			navigate({ to: "/chat" });
+		}
+	};
+
+	const handleRenameThread = async (e: React.FormEvent) => {
+		e.preventDefault();
+		if (!threadToRename || !renameTitle.trim()) return;
+
+		await updateThreadTitle({
+			threadId: threadToRename,
+			title: renameTitle.trim(),
+		});
+		setThreadToRename(null);
+		setRenameTitle("");
+	};
+
+	const openRenameDialog = (threadId: Id<"threads">, currentTitle: string) => {
+		setRenameTitle(currentTitle);
+		setThreadToRename(threadId);
+	};
+
+	const handleThreadClick = () => {
+		if (isMobile) {
+			setOpenMobile(false);
+		}
+	};
+
+	// Group threads by time period
+	const groupedThreads = threads
+		? (() => {
+				const now = Date.now();
+				const today = new Date(now).setHours(0, 0, 0, 0);
+				const yesterday = today - 24 * 60 * 60 * 1000;
+				const lastWeek = today - 7 * 24 * 60 * 60 * 1000;
+
+				const groups: { label: string; threads: typeof threads }[] = [
+					{ label: "Today", threads: [] },
+					{ label: "Yesterday", threads: [] },
+					{ label: "Previous 7 Days", threads: [] },
+					{ label: "Older", threads: [] },
+				];
+
+				for (const thread of threads) {
+					const updatedAt = thread.updatedAt ?? thread.createdAt ?? 0;
+					if (updatedAt >= today) {
+						groups[0].threads.push(thread);
+					} else if (updatedAt >= yesterday) {
+						groups[1].threads.push(thread);
+					} else if (updatedAt >= lastWeek) {
+						groups[2].threads.push(thread);
+					} else {
+						groups[3].threads.push(thread);
+					}
+				}
+
+				return groups.filter((g) => g.threads.length > 0);
+			})()
+		: [];
+
+	return (
+		<>
+			<Sidebar className="border-r border-border/50">
+				<SidebarHeader className="border-b border-border/50 p-4">
+					<Button
+						onClick={handleNewChat}
+						disabled={isCreating}
+						className="w-full justify-start gap-2 bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary"
+						variant="ghost"
+					>
+						{isCreating ? (
+							<Loader2 className="h-4 w-4 animate-spin" />
+						) : (
+							<MessageSquarePlus className="h-4 w-4" />
+						)}
+						New Chat
+					</Button>
+				</SidebarHeader>
+
+				<SidebarContent>
+					<ScrollArea className="h-full">
+						{threads === undefined ? (
+							// Loading state
+							<SidebarGroup>
+								<SidebarGroupContent>
+									<SidebarMenu>
+										{["a", "b", "c", "d", "e"].map((id) => (
+											<SidebarMenuItem key={`skeleton-${id}`}>
+												<SidebarMenuSkeleton showIcon />
+											</SidebarMenuItem>
+										))}
+									</SidebarMenu>
+								</SidebarGroupContent>
+							</SidebarGroup>
+						) : threads.length === 0 ? (
+							// Empty state
+							<div className="flex flex-col items-center justify-center px-4 py-12 text-center">
+								<div className="rounded-full bg-muted p-3 mb-3">
+									<MessageSquare className="h-6 w-6 text-muted-foreground" />
+								</div>
+								<p className="text-sm font-medium text-foreground">
+									No conversations yet
+								</p>
+								<p className="text-xs text-muted-foreground mt-1">
+									Start a new chat to begin
+								</p>
+							</div>
+						) : (
+							// Thread groups
+							groupedThreads.map((group) => (
+								<SidebarGroup key={group.label}>
+									<SidebarGroupLabel className="text-xs text-muted-foreground/70 px-2">
+										{group.label}
+									</SidebarGroupLabel>
+									<SidebarGroupContent>
+										<SidebarMenu>
+											{group.threads.map((thread) => (
+												<SidebarMenuItem key={thread._id}>
+													<SidebarMenuButton
+														asChild
+														isActive={currentThreadId === thread._id}
+														className={cn(
+															"group/item transition-colors",
+															currentThreadId === thread._id &&
+																"bg-accent text-accent-foreground",
+														)}
+													>
+														<Link
+															to="/chat/$threadId"
+															params={{ threadId: thread._id }}
+															search={{
+																initialInput: undefined,
+																initialThinking: undefined,
+															}}
+															onClick={handleThreadClick}
+															className="flex items-center gap-2"
+														>
+															<MessageSquare className="h-4 w-4 shrink-0 opacity-60" />
+															<span className="truncate flex-1">
+																{thread.title}
+															</span>
+														</Link>
+													</SidebarMenuButton>
+													<DropdownMenu>
+														<DropdownMenuTrigger asChild>
+															<SidebarMenuAction
+																showOnHover
+																className="opacity-0 group-hover/item:opacity-100 transition-opacity"
+															>
+																<MoreHorizontal className="h-4 w-4" />
+																<span className="sr-only">More options</span>
+															</SidebarMenuAction>
+														</DropdownMenuTrigger>
+														<DropdownMenuContent side="right" align="start">
+															<DropdownMenuItem
+																onClick={() =>
+																	openRenameDialog(thread._id, thread.title)
+																}
+															>
+																<Pencil className="h-4 w-4 mr-2" />
+																Rename
+															</DropdownMenuItem>
+															<DropdownMenuItem
+																onClick={() => setThreadToDelete(thread._id)}
+																className="text-destructive focus:text-destructive"
+															>
+																<Trash2 className="h-4 w-4 mr-2" />
+																Delete
+															</DropdownMenuItem>
+														</DropdownMenuContent>
+													</DropdownMenu>
+												</SidebarMenuItem>
+											))}
+										</SidebarMenu>
+									</SidebarGroupContent>
+								</SidebarGroup>
+							))
+						)}
+					</ScrollArea>
+				</SidebarContent>
+
+				<SidebarFooter className="border-t border-border/50 p-4">
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button
+								variant="ghost"
+								className="w-full justify-start px-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground h-auto py-2"
+							>
+								<div className="flex items-center gap-3 w-full text-left">
+									<Avatar className="h-8 w-8">
+										<AvatarImage
+											src={user?.imageUrl}
+											alt={user?.fullName || "User"}
+										/>
+										<AvatarFallback>
+											{user?.firstName?.charAt(0) || "U"}
+										</AvatarFallback>
+									</Avatar>
+									<div className="flex-1 min-w-0">
+										<p className="text-sm font-medium truncate">
+											{user?.fullName || "User"}
+										</p>
+										<p className="text-xs text-muted-foreground truncate">
+											{user?.primaryEmailAddress?.emailAddress}
+										</p>
+									</div>
+									<MoreHorizontal className="h-4 w-4 ml-auto text-muted-foreground" />
+								</div>
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent
+							className="w-[--radix-dropdown-menu-trigger-width] min-w-56"
+							align="start"
+							side="top"
+						>
+							<div className="flex items-center gap-2 p-2">
+								<Avatar className="h-8 w-8">
+									<AvatarImage src={user?.imageUrl} />
+									<AvatarFallback>
+										{user?.firstName?.charAt(0) || "U"}
+									</AvatarFallback>
+								</Avatar>
+								<div className="grid flex-1 text-left text-sm leading-tight">
+									<span className="truncate font-semibold">
+										{user?.fullName || "User"}
+									</span>
+									<span className="truncate text-xs text-muted-foreground">
+										{user?.primaryEmailAddress?.emailAddress}
+									</span>
+								</div>
+							</div>
+							<DropdownMenuSeparator />
+							<DropdownMenuItem
+								onClick={() => signOut({ redirectUrl: "/sign-in" })}
+							>
+								<LogOut className="mr-2 h-4 w-4" />
+								Log out
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
+				</SidebarFooter>
+			</Sidebar>
+
+			{/* Rename Dialog */}
+			<Dialog
+				open={!!threadToRename}
+				onOpenChange={(open) => !open && setThreadToRename(null)}
+			>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Rename conversation</DialogTitle>
+						<DialogDescription>
+							Enter a new name for this conversation.
+						</DialogDescription>
+					</DialogHeader>
+					<form onSubmit={handleRenameThread}>
+						<div className="grid gap-4 py-4">
+							<div className="grid gap-2">
+								<Label htmlFor="name" className="sr-only">
+									Name
+								</Label>
+								<Input
+									id="name"
+									value={renameTitle}
+									onChange={(e) => setRenameTitle(e.target.value)}
+									placeholder="Thread title"
+									autoFocus
+								/>
+							</div>
+						</div>
+						<DialogFooter>
+							<Button
+								type="button"
+								variant="secondary"
+								onClick={() => setThreadToRename(null)}
+							>
+								Cancel
+							</Button>
+							<Button type="submit">Save</Button>
+						</DialogFooter>
+					</form>
+				</DialogContent>
+			</Dialog>
+
+			{/* Delete confirmation dialog */}
+			<AlertDialog
+				open={threadToDelete !== null}
+				onOpenChange={(open) => !open && setThreadToDelete(null)}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Delete conversation?</AlertDialogTitle>
+						<AlertDialogDescription>
+							This will permanently delete this conversation and all its
+							messages. This action cannot be undone.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={handleDeleteThread}
+							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+						>
+							Delete
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+		</>
+	);
+}

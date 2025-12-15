@@ -20,6 +20,7 @@ export const env = createEnv({
 	client: {
 		VITE_CONVEX_URL: z.url(),
 		VITE_APP_TITLE: z.string().min(1),
+		VITE_TANSTACK_DEVTOOLS: z.string().optional().default("true"),
 	},
 
 	/**
@@ -28,6 +29,7 @@ export const env = createEnv({
 	 */
 	runtimeEnv: {
 		...import.meta.env,
+		VITE_TANSTACK_DEVTOOLS: import.meta.env.VITE_TANSTACK_DEVTOOLS,
 		OLLAMA_MODEL: process.env.OLLAMA_MODEL,
 		OLLAMA_BASE_URL: process.env.OLLAMA_BASE_URL,
 	},

@@ -91,7 +91,7 @@ export function ChatMessage({
                     if (isUserMessage) {
                       const displayText = stripThinkPrefix(part.content)
                       return (
-                        <div key={idx} className="whitespace-pre-wrap">
+                        <div key={`${message.id}-user-text`} className="whitespace-pre-wrap">
                           {displayText}
                         </div>
                       )
@@ -113,7 +113,7 @@ export function ChatMessage({
                     const hasMainContent = parsedContent.length > 0 || showCursor
 
                     return (
-                      <div key={idx}>
+                      <div key={`${message.id}-assistant-text`}>
                         <ThinkingSection
                           content={thinkingContent}
                           isThinking={isThinking}
@@ -131,7 +131,7 @@ export function ChatMessage({
                     // Handle native thinking parts from TanStack AI
                     return (
                       <ThinkingSection
-                        key={idx}
+                        key={`${message.id}-thinking`}
                         content={part.content}
                         isThinking={false}
                       />
