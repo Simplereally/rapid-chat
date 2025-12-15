@@ -5,6 +5,7 @@ import { ThinkingSection } from './thinking-section'
 import { TypingIndicator } from './typing-indicator'
 import { ChatMessageActions } from './chat-message-actions'
 import { EditMessageForm } from './edit-message-form'
+import { ToolCallIndicator } from './tool-call-indicator'
 import { stripThinkPrefix } from '../lib/chat-utils'
 import type { ParsedMessage, ParsedTextPart } from '../types'
 
@@ -136,6 +137,27 @@ export function ChatMessage({
                         isThinking={false}
                       />
                     )
+                  }
+                  if (part.type === 'tool-call') {
+                    // Only show indicator while tool is executing (no output yet)
+                    const toolPart = part as { id: string; name: string; arguments: string; output?: unknown }
+                    if (toolPart.output === undefined) {
+                      let parsedArgs: Record<string, unknown> = {}
+                      try {
+                        parsedArgs = JSON.parse(toolPart.arguments || '{}')
+                      } catch {
+                        // Invalid JSON, use empty object
+                      }
+                      return (
+                        <ToolCallIndicator
+                          key={`${message.id}-tool-${toolPart.id}`}
+                          toolName={toolPart.name}
+                          args={parsedArgs}
+                        />
+                      )
+                    }
+                    // Tool completed - don't render anything (indicator disappears)
+                    return null
                   }
                   return null
                 })}
