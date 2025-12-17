@@ -31,7 +31,7 @@ export const list = query({
 export const add = mutation({
 	args: {
 		threadId: v.id("threads"),
-		role: v.union(v.literal("user"), v.literal("assistant")),
+		role: v.union(v.literal("user"), v.literal("assistant"), v.literal("error")),
 		content: v.string(),
 	},
 	handler: async (ctx, args) => {
@@ -145,7 +145,6 @@ export const remove = mutation({
 	},
 });
 
-// Clear all messages in a thread (but keep the thread)
 export const clearThread = mutation({
 	args: { threadId: v.id("threads") },
 	handler: async (ctx, args) => {
@@ -173,6 +172,7 @@ export const clearThread = mutation({
 		await ctx.db.patch(args.threadId, {
 			title: "New Chat",
 			updatedAt: Date.now(),
+			lastAiResponseAt: undefined,
 		});
 	},
 });

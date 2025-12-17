@@ -31,6 +31,8 @@ function getToolDisplayText(
   args: Record<string, unknown>
 ): string {
   switch (toolName) {
+    case 'generating':
+      return 'Generating...'
     case 'web_search': {
       const query = typeof args.query === 'string' ? args.query : ''
       return query ? `Searching the web for "${query}"` : 'Searching the web...'

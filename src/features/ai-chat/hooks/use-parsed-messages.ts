@@ -1,14 +1,13 @@
-import type { UIMessage } from "@tanstack/ai-react";
 import { useMemo, useRef } from "react";
 import { parseThinkingContent } from "../lib/chat-utils";
-import type { ParsedMessage, ParsedPart } from "../types";
+import type { ChatUiMessage, ParsedMessage, ParsedPart } from "../types";
 
 /**
  * Parse a single message into ParsedMessage format.
  * Extracted to allow caching of completed messages.
  */
 function parseMessage(
-	message: UIMessage,
+	message: ChatUiMessage,
 	isStreamingAssistant: boolean,
 ): ParsedMessage {
 	if (message.role !== "assistant") {
@@ -41,7 +40,8 @@ function parseMessage(
 					: typeof p.text === "string"
 						? p.text
 						: "";
-			const { thinking, content, isThinking } = parseThinkingContent(rawContent);
+			const { thinking, content, isThinking } =
+				parseThinkingContent(rawContent);
 			const currentlyThinking = isStreamingAssistant && isThinking;
 			parsedParts.push({
 				type: "text",
@@ -62,7 +62,7 @@ function parseMessage(
  * Get content fingerprint for change detection.
  * Much cheaper than comparing full objects.
  */
-function getContentFingerprint(message: UIMessage): string {
+function getContentFingerprint(message: ChatUiMessage): string {
 	const parts = message.parts || [];
 	let totalLength = 0;
 	for (const part of parts) {
@@ -74,7 +74,7 @@ function getContentFingerprint(message: UIMessage): string {
 }
 
 export function useParsedMessages(
-	displayMessages: UIMessage[],
+	displayMessages: ChatUiMessage[],
 	isLoading: boolean,
 ) {
 	// Cache for parsed messages to avoid re-parsing completed messages
@@ -85,11 +85,20 @@ export function useParsedMessages(
 		const cache = cacheRef.current;
 		const result: ParsedMessage[] = [];
 
+		let lastAssistantId: string | null = null;
+		for (let i = displayMessages.length - 1; i >= 0; i--) {
+			if (displayMessages[i]?.role === "assistant") {
+				lastAssistantId = displayMessages[i].id;
+				break;
+			}
+		}
+
 		for (let i = 0; i < displayMessages.length; i++) {
 			const message = displayMessages[i];
-			const isLastMessage = i === displayMessages.length - 1;
 			const isStreamingAssistant =
-				isLoading && message.role === "assistant" && isLastMessage;
+				isLoading &&
+				message.role === "assistant" &&
+				message.id === lastAssistantId;
 
 			// For streaming messages, always re-parse (content is changing)
 			if (isStreamingAssistant) {
@@ -100,7 +109,7 @@ export function useParsedMessages(
 			// For completed messages, use cache if available
 			const fingerprint = getContentFingerprint(message);
 			const cached = cache.get(fingerprint);
-			
+
 			if (cached && cached.id === message.id) {
 				result.push(cached);
 			} else {
@@ -112,7 +121,7 @@ export function useParsedMessages(
 
 		// Cleanup old cache entries to prevent memory leaks
 		// Keep only entries for current messages
-		const currentIds = new Set(displayMessages.map(m => m.id));
+		const currentIds = new Set(displayMessages.map((m) => m.id));
 		for (const [key, value] of cache.entries()) {
 			if (!currentIds.has(value.id)) {
 				cache.delete(key);
@@ -124,4 +133,3 @@ export function useParsedMessages(
 
 	return parsedMessages;
 }
-

@@ -1,4 +1,4 @@
-import { useAuth } from "@clerk/tanstack-react-start";
+import { Button } from "@/components/ui/button";
 import {
 	BLINK_ANIMATION_CSS,
 	ChatHeader,
@@ -11,10 +11,11 @@ import { useChatInitializationLogic } from "@/features/ai-chat/hooks/use-chat-in
 import { useChatScroll } from "@/features/ai-chat/hooks/use-chat-scroll";
 import { useHybridChatMessages } from "@/features/ai-chat/hooks/use-hybrid-chat-messages";
 import { useParsedMessages } from "@/features/ai-chat/hooks/use-parsed-messages";
+import { useAuth } from "@clerk/tanstack-react-start";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "convex/react";
-import { Loader2 } from "lucide-react";
-import { useState } from "react";
+import { ArrowDown, Loader2 } from "lucide-react";
+import { useCallback, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 
@@ -46,7 +47,8 @@ function ChatThreadPage() {
 
 	// 2. Hybrid Core State
 	const {
-		messages: displayMessages,
+		uiMessages,
+		conversationMessages,
 		isLoading,
 		stop,
 		append,
@@ -55,27 +57,28 @@ function ChatThreadPage() {
 	} = useHybridChatMessages({ threadId });
 
 	// 3. View Logic Extraction
-	const parsedMessages = useParsedMessages(displayMessages, isLoading);
+	const parsedMessages = useParsedMessages(uiMessages, isLoading);
 
 	// 4. UI Actions & State
 	const { initialThinking, initialInput } = Route.useSearch();
 	const [isThinkingEnabled, setIsThinkingEnabled] = useState(
 		initialThinking ?? true,
 	);
-	const [chatInput, setChatInput] = useState("");
 
 	// 5. Hooks: Actions, Scroll, Init
 	const { handleSubmit, clearConversation } = useChatActions({
 		threadId,
 		isThinkingEnabled,
-		setChatInput,
 		append,
 		setStreamingMessages,
 		isLoading,
 		getToken: () => getToken({ template: "convex" }),
 	});
 
-	const { scrollViewportRef } = useChatScroll(parsedMessages, isLoading);
+	const { scrollViewportRef, showScrollToBottom, pinToBottom } = useChatScroll(
+		parsedMessages,
+		isLoading,
+	);
 
 	useChatInitializationLogic({
 		threadId,
@@ -93,12 +96,14 @@ function ChatThreadPage() {
 	});
 
 	// Quick fix for the adapter:
-	const adaptSendMessage = (content: string) =>
-		append({ role: "user", content });
+	const adaptSendMessage = useCallback(
+		(content: string) => append({ role: "user", content }),
+		[append],
+	);
 
 	// Re-bind messageActions with correct methods
 	const activeMessageActions = useMessageActions({
-		messages: displayMessages,
+		messages: conversationMessages,
 		setMessages: setStreamingMessages,
 		sendMessage: adaptSendMessage,
 		isLoading,
@@ -135,7 +140,7 @@ function ChatThreadPage() {
 		<div className="flex flex-col h-[calc(100vh-3.5rem)] max-w-4xl mx-auto">
 			<style>{BLINK_ANIMATION_CSS}</style>
 			<ChatHeader
-				hasMessages={displayMessages.length > 0}
+				hasMessages={uiMessages.length > 0}
 				isLoading={isLoading}
 				onClear={clearConversation}
 				title={thread?.title ?? "Chat"}
@@ -158,17 +163,27 @@ function ChatThreadPage() {
 				getDisplayContent={activeMessageActions.getDisplayContent}
 			/>
 
-			<div className="shrink-0 border-t border-border bg-background px-4 pt-2 pb-4">
-				<ChatInputForm
-					input={chatInput}
-					onInputChange={setChatInput}
-					onSubmit={(e) => handleSubmit(e, chatInput)}
-					onStop={stop}
-					isLoading={isLoading || !isTokenLoaded}
-					isThinkingEnabled={isThinkingEnabled}
-					onThinkingToggle={() => setIsThinkingEnabled(!isThinkingEnabled)}
-				/>
-			</div>
+			<div className="relative shrink-0 border-t border-border bg-background px-4 pt-2 pb-4">
+				{showScrollToBottom && (
+					<Button
+						type="button"
+						variant="secondary"
+						size="icon"
+						className="absolute right-4 -top-4 shadow-sm"
+						onClick={pinToBottom}
+					>
+						<ArrowDown className="h-4 w-4" />
+						<span className="sr-only">Jump to bottom</span>
+					</Button>
+				)}
+			<ChatInputForm
+				onSubmit={handleSubmit}
+				onStop={stop}
+				isLoading={isLoading || !isTokenLoaded}
+				isThinkingEnabled={isThinkingEnabled}
+				onThinkingToggle={() => setIsThinkingEnabled(!isThinkingEnabled)}
+			/>
 		</div>
+	</div>
 	);
 }

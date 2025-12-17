@@ -13,19 +13,17 @@ function NewChatPage() {
 	const navigate = useNavigate();
 	const createThread = useMutation(api.threads.create);
 	const [isCreating, setIsCreating] = useState(false);
-	const [input, setInput] = useState("");
 	const [isThinkingEnabled, setIsThinkingEnabled] = useState(true);
 
-	const handleInputSubmit = async (e: React.FormEvent) => {
-		e.preventDefault();
-		if (!input.trim() || isCreating) return;
+	const handleInputSubmit = async (content: string) => {
+		if (!content.trim() || isCreating) return;
 
 		setIsCreating(true);
 		try {
 			const threadId = await createThread({});
 
 			const thinkPrefix = isThinkingEnabled ? "/think " : "/no_think ";
-			const fullContent = thinkPrefix + input;
+			const fullContent = thinkPrefix + content;
 
 			navigate({
 				to: "/chat/$threadId",
@@ -61,8 +59,6 @@ function NewChatPage() {
 
 			<div className="shrink-0 border-t border-border bg-background px-4 pt-2 pb-4">
 				<ChatInputForm
-					input={input}
-					onInputChange={setInput}
 					onSubmit={handleInputSubmit}
 					onStop={() => {}}
 					isLoading={isCreating}

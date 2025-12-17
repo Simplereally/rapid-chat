@@ -24,6 +24,16 @@ export const env = createEnv({
 		VITE_APP_TITLE: z.string().min(1),
 		VITE_TANSTACK_DEVTOOLS: z.string(),
 		VITE_CLERK_PUBLISHABLE_KEY: z.string().min(1),
+		VITE_CHAT_STREAM_CHUNK_MIN_INTERVAL_MS: z.coerce
+			.number()
+			.int()
+			.positive()
+			.optional(),
+		VITE_CHAT_STREAM_CHUNK_MIN_CHARS: z.coerce
+			.number()
+			.int()
+			.positive()
+			.optional(),
 	},
 
 	/**

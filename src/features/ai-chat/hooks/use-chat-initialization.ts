@@ -1,3 +1,4 @@
+import type { UIMessage } from "@tanstack/ai-react";
 import { useMutation } from "convex/react";
 import { useEffect, useRef } from "react";
 import { api } from "../../../../convex/_generated/api";
@@ -15,10 +16,9 @@ export function useChatInitializationLogic({
 	threadId: string;
 	initialInput?: string;
 	clearInitialInput: () => void;
-	append: (message: {
-		role: "user";
-		content: string;
-	}) => Promise<string | null | undefined | void>;
+	append: (
+		message: { role: "user"; content: string } | UIMessage,
+	) => Promise<void>;
 	isTokenLoaded: boolean;
 	getToken: () => Promise<string | null>;
 }) {
@@ -31,7 +31,7 @@ export function useChatInitializationLogic({
 
 			const run = async () => {
 				// 1. Save to Convex
-				const { isFirstMessage } = await addMessage({
+				const { isFirstMessage, messageId } = await addMessage({
 					threadId: threadId as Id<"threads">,
 					role: "user",
 					content: initialInput,
@@ -49,9 +49,10 @@ export function useChatInitializationLogic({
 
 				// 3. Trigger AI
 				await append({
+					id: messageId,
 					role: "user",
-					content: initialInput,
-				});
+					parts: [{ type: "text", content: initialInput }],
+				} satisfies UIMessage);
 
 				// 4. Clear URL param
 				clearInitialInput();

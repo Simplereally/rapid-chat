@@ -21,7 +21,7 @@ export default defineSchema({
 	// Messages within threads
 	messages: defineTable({
 		threadId: v.id("threads"),
-		role: v.union(v.literal("user"), v.literal("assistant")),
+		role: v.union(v.literal("user"), v.literal("assistant"), v.literal("error")),
 		content: v.string(),
 		createdAt: v.optional(v.number()),
 	}).index("by_thread", ["threadId", "createdAt"]),

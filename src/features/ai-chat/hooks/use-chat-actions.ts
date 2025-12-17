@@ -8,11 +8,9 @@ import { triggerTitleGeneration } from "../lib/title-generation";
 interface UseChatActionsProps {
 	threadId: string;
 	isThinkingEnabled: boolean;
-	setChatInput: (val: string) => void;
-	append: (message: {
-		role: "user";
-		content: string;
-	}) => Promise<string | null | undefined | void>;
+	append: (
+		message: { role: "user"; content: string } | UIMessage,
+	) => Promise<void>;
 	setStreamingMessages: (messages: UIMessage[]) => void;
 	isLoading: boolean;
 	getToken: () => Promise<string | null>;
@@ -21,7 +19,6 @@ interface UseChatActionsProps {
 export function useChatActions({
 	threadId,
 	isThinkingEnabled,
-	setChatInput,
 	append,
 	setStreamingMessages,
 	isLoading,
@@ -29,19 +26,18 @@ export function useChatActions({
 }: UseChatActionsProps) {
 	const addMessage = useMutation(api.messages.add);
 	const clearThreadMessages = useMutation(api.messages.clearThread);
-	
+
 	// Track if we've already triggered title generation for this thread
 	const titleGeneratedRef = useRef(false);
 
-	const handleSubmit = async (e: React.FormEvent, chatInput: string) => {
-		e.preventDefault();
+	const handleSubmit = async (chatInput: string) => {
 		if (!chatInput.trim() || isLoading) return;
 
 		const thinkPrefix = isThinkingEnabled ? "/think " : "/no_think ";
 		const fullContent = thinkPrefix + chatInput;
 
 		// 1. Save User Message to Convex (Persistence)
-		const { isFirstMessage } = await addMessage({
+		const { isFirstMessage, messageId } = await addMessage({
 			threadId: threadId as Id<"threads">,
 			role: "user",
 			content: fullContent,
@@ -60,11 +56,10 @@ export function useChatActions({
 
 		// 3. Trigger Stream
 		await append({
+			id: messageId,
 			role: "user",
-			content: fullContent,
+			parts: [{ type: "text", content: fullContent }],
 		});
-
-		setChatInput("");
 	};
 
 	const clearConversation = useCallback(async () => {

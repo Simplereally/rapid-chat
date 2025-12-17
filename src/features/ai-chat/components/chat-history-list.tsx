@@ -45,8 +45,19 @@ export function ChatHistoryList({
 						<p>Start a conversation...</p>
 					</div>
 				)}
-				{messages.map((message) => {
+				{messages.map((message, messageIndex) => {
 					const displayContent = getDisplayContent(message);
+					const onRetry =
+						message.role === "error"
+							? () => {
+								for (let i = messageIndex - 1; i >= 0; i--) {
+									if (messages[i].role === "assistant") {
+										regenerateResponse(messages[i].id);
+										break;
+									}
+								}
+							}
+							: undefined;
 					return (
 						<ChatMessage
 							key={message.id}
@@ -61,6 +72,7 @@ export function ChatHistoryList({
 							onCopy={() => copyToClipboard(message.id, displayContent)}
 							onEdit={() => startEditing(message.id, displayContent)}
 							onRegenerate={() => regenerateResponse(message.id)}
+							onRetry={onRetry}
 							onEditContentChange={setEditContent}
 							onEditSubmit={submitEdit}
 							onEditCancel={cancelEditing}
