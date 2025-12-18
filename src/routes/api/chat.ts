@@ -1,12 +1,9 @@
+import { env } from "@/env";
+import { webSearchTool } from "@/tools";
 import { chat, toStreamResponse } from "@tanstack/ai";
 import { ollama } from "@tanstack/ai-ollama";
 import { createFileRoute } from "@tanstack/react-router";
-import { ConvexHttpClient } from "convex/browser";
 import { z } from "zod";
-import { env } from "@/env";
-import { webSearchTool } from "@/tools";
-import { api } from "../../../convex/_generated/api";
-import type { Id } from "../../../convex/_generated/dataModel";
 
 /**
  * Available tools for the chat model.
@@ -62,23 +59,6 @@ export const Route = createFileRoute("/api/chat")({
 						return new Response("Unauthorized", { status: 401 });
 					}
 
-					const token = authHeader.replace("Bearer ", "");
-
-					// Initialize Convex Client
-					if (!env.VITE_CONVEX_URL) {
-						console.error("VITE_CONVEX_URL is missing");
-						return new Response("Configuration Error", { status: 500 });
-					}
-					const convex = new ConvexHttpClient(env.VITE_CONVEX_URL);
-					convex.setAuth(token);
-
-					// 1. Create a placeholder assistant message in message DB
-					const { messageId } = await convex.mutation(api.messages.add, {
-						threadId: threadId as Id<"threads">,
-						role: "assistant",
-						content: "",
-					});
-
 					// Separate system messages for systemPrompts and filter conversation messages
 					const clientSystemPrompts = incomingMessages
 						.filter((m) => m.role === "system")
@@ -87,12 +67,13 @@ export const Route = createFileRoute("/api/chat")({
 					// Combine base system prompt with any client-provided prompts
 					const allSystemPrompts = [BASE_SYSTEM_PROMPT, ...clientSystemPrompts];
 
-					const conversationMessages = incomingMessages
-						.filter((m): m is { role: "user" | "assistant"; content: string } => 
-							m.role === "user" || m.role === "assistant"
-						);
+					const conversationMessages = incomingMessages.filter(
+						(m): m is { role: "user" | "assistant"; content: string } =>
+							m.role === "user" || m.role === "assistant",
+					);
 
-					// 2. Start the chat stream
+					// Stream the chat response - no DB persistence here
+					// Client handles persistence via onFinish callback
 					const stream = chat({
 						adapter: ollama({
 							baseUrl: env.OLLAMA_BASE_URL,
@@ -103,62 +84,7 @@ export const Route = createFileRoute("/api/chat")({
 						tools: availableTools,
 					});
 
-					// 3. Wrap the stream to sync with Convex
-					const wrappedStream = (async function* () {
-						let fullContent = "";
-						let lastUpdate = Date.now();
-						const updateInterval = 1000; // Update DB every 1s max to save writes
-
-						for await (const chunk of stream) {
-							const typedChunk = chunk as {
-								type?: unknown;
-								content?: unknown;
-							};
-							if (typedChunk.type === "content") {
-								const content = typedChunk.content;
-								if (typeof content === "string") {
-									fullContent = content;
-								} else if (Array.isArray(content)) {
-									let snapshot = "";
-									for (const part of content) {
-										const p = part as {
-											type?: unknown;
-											text?: unknown;
-										};
-										if (p.type === "text" && typeof p.text === "string") {
-											snapshot += p.text;
-										}
-									}
-									fullContent = snapshot;
-								}
-							}
-
-							yield chunk;
-
-							// Throttle DB updates - fire-and-forget to avoid blocking the stream
-							// This is critical for smooth streaming UX
-							if (Date.now() - lastUpdate > updateInterval) {
-								const contentSnapshot = fullContent;
-								// Don't await - let it run in the background
-								convex.mutation(api.messages.update, {
-									messageId,
-									content: contentSnapshot,
-								}).catch((err) => {
-									console.error("Background DB update failed:", err);
-								});
-								lastUpdate = Date.now();
-							}
-						}
-
-						// Final update MUST be awaited to ensure consistency
-						await convex.mutation(api.messages.update, {
-							messageId,
-							content: fullContent,
-						});
-					})();
-
-					// 4. Return the stream response
-					return toStreamResponse(wrappedStream);
+					return toStreamResponse(stream);
 				} catch (e) {
 					console.error(e);
 					return new Response("Internal Error", { status: 500 });

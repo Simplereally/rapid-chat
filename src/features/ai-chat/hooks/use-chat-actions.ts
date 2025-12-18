@@ -16,6 +16,10 @@ interface UseChatActionsProps {
 	getToken: () => Promise<string | null>;
 }
 
+/**
+ * Chat action handlers with fire-and-forget persistence.
+ * All Convex mutations are non-blocking to ensure rapid UI response.
+ */
 export function useChatActions({
 	threadId,
 	isThinkingEnabled,
@@ -27,47 +31,63 @@ export function useChatActions({
 	const addMessage = useMutation(api.messages.add);
 	const clearThreadMessages = useMutation(api.messages.clearThread);
 
-	// Track if we've already triggered title generation for this thread
-	const titleGeneratedRef = useRef(false);
+	// Track title generation to prevent duplicates
+	const hasTitleBeenGenerated = useRef(false);
 
-	const handleSubmit = async (chatInput: string) => {
+	/**
+	 * Fire-and-forget user message persistence.
+	 * Returns immediately - UI doesn't wait for Convex.
+	 */
+	const persistUserMessage = (content: string): void => {
+		addMessage({
+			threadId: threadId as Id<"threads">,
+			role: "user",
+			content,
+		})
+			.then(({ isFirstMessage }) => {
+				// Trigger title generation for first message (fire-and-forget)
+				if (isFirstMessage && !hasTitleBeenGenerated.current) {
+					hasTitleBeenGenerated.current = true;
+					getToken().then((token) => {
+						if (token) {
+							triggerTitleGeneration(threadId, content, token);
+						}
+					});
+				}
+			})
+			.catch((err) => {
+				console.error("Failed to persist user message:", err);
+			});
+	};
+
+	const handleSubmit = async (chatInput: string): Promise<void> => {
 		if (!chatInput.trim() || isLoading) return;
 
 		const thinkPrefix = isThinkingEnabled ? "/think " : "/no_think ";
 		const fullContent = thinkPrefix + chatInput;
 
-		// 1. Save User Message to Convex (Persistence)
-		const { isFirstMessage, messageId } = await addMessage({
-			threadId: threadId as Id<"threads">,
-			role: "user",
-			content: fullContent,
-		});
+		// 1. Fire-and-forget persistence - don't block the UI
+		persistUserMessage(fullContent);
 
-		// 2. Trigger AI title generation if this is the first message
-		// Fire-and-forget: don't await, don't block the chat
-		if (isFirstMessage && !titleGeneratedRef.current) {
-			titleGeneratedRef.current = true;
-			getToken().then((token) => {
-				if (token) {
-					triggerTitleGeneration(threadId, fullContent, token);
-				}
-			});
-		}
-
-		// 3. Trigger Stream
-		await append({
-			id: messageId,
-			role: "user",
-			parts: [{ type: "text", content: fullContent }],
-		});
+		// 2. Immediately trigger the stream (TanStack AI generates the message ID)
+		await append({ role: "user", content: fullContent });
 	};
 
-	const clearConversation = useCallback(async () => {
+	const clearConversation = useCallback(async (): Promise<void> => {
 		if (isLoading) return;
-		await clearThreadMessages({ threadId: threadId as Id<"threads"> });
+
+		// Clear UI immediately for responsive feedback
 		setStreamingMessages([]);
-		// Reset title generation flag when conversation is cleared
-		titleGeneratedRef.current = false;
+
+		// Fire-and-forget database cleanup
+		clearThreadMessages({ threadId: threadId as Id<"threads"> }).catch(
+			(err) => {
+				console.error("Failed to clear thread messages:", err);
+			},
+		);
+
+		// Reset title generation flag
+		hasTitleBeenGenerated.current = false;
 	}, [isLoading, clearThreadMessages, threadId, setStreamingMessages]);
 
 	return {

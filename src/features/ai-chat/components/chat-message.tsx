@@ -9,7 +9,6 @@ import { ChatMessageActions } from "./chat-message-actions";
 import { EditMessageForm } from "./edit-message-form";
 import { ThinkingSection } from "./thinking-section";
 import { ToolCallIndicator } from "./tool-call-indicator";
-import { TypingIndicator } from "./typing-indicator";
 
 interface ChatMessageProps {
 	message: ParsedMessage;
@@ -121,7 +120,11 @@ export function ChatMessage({
 				</Avatar>
 			)}
 
-			<div className="flex flex-col gap-1 max-w-[80%]">
+			<div
+				className={`flex flex-col gap-1 ${
+					isErrorMessage ? "w-full max-w-[90%]" : "max-w-[80%]"
+				}`}
+			>
 				{/* Message bubble with action buttons */}
 				<div className="group relative">
 					<div
@@ -137,11 +140,16 @@ export function ChatMessage({
 					>
 						{/* Edit mode - show textarea */}
 						{isErrorMessage ? (
-							<Alert variant="destructive" className="rounded-lg">
-								<AlertTriangle />
-								<AlertTitle>Request failed</AlertTitle>
+							<Alert
+								variant="default"
+								className="rounded-lg border-destructive/20 bg-destructive/5"
+							>
+								<AlertTriangle className="text-destructive/70" />
+								<AlertTitle className="text-destructive/80">
+									Request failed
+								</AlertTitle>
 								<AlertDescription>
-									<div className="whitespace-pre-wrap">
+									<div className="whitespace-pre-wrap break-words">
 										{getTextContent(message.parsedParts)}
 									</div>
 									{onRetry && (
@@ -169,7 +177,7 @@ export function ChatMessage({
 						) : (
 							/* Normal display mode */
 							<>
-								{message.parsedParts.map((part, idx) => {
+								{message.parsedParts.map((part) => {
 									if (part.type === "text") {
 										// For user messages, show content without /think or /no_think prefix
 										if (isUserMessage) {
@@ -189,17 +197,8 @@ export function ChatMessage({
 										const thinkingContent = parsedPart.thinkingContent ?? "";
 										const parsedContent = parsedPart.parsedContent ?? "";
 										const isThinking = parsedPart.isThinking ?? false;
-										const isLastPart = idx === message.parsedParts.length - 1;
 
-										// Only show cursor when streaming main content (not while thinking)
-										const showCursor =
-											message.isStreamingAssistant && !isThinking && isLastPart;
-
-										// Don't show main content area if:
-										// - We're actively thinking (content is being streamed to thinking section)
-										// - We have no parsed content AND no cursor to show
-										const hasMainContent =
-											parsedContent.length > 0 || showCursor;
+										const hasMainContent = parsedContent.length > 0;
 
 										return (
 											<div key={`${message.id}-assistant-text`}>
@@ -210,7 +209,6 @@ export function ChatMessage({
 												{hasMainContent && (
 													<div>
 														<MarkdownMessage content={parsedContent} />
-														{showCursor && <TypingIndicator />}
 													</div>
 												)}
 											</div>

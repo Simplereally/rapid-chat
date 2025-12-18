@@ -34,6 +34,11 @@ export const env = createEnv({
 			.int()
 			.positive()
 			.optional(),
+		VITE_CHAT_STREAM_CHUNK_MAX_INTERVAL_MS: z.coerce
+			.number()
+			.int()
+			.positive()
+			.optional(),
 	},
 
 	/**

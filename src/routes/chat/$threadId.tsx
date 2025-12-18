@@ -1,15 +1,14 @@
 import { Button } from "@/components/ui/button";
 import {
-	BLINK_ANIMATION_CSS,
 	ChatHeader,
 	ChatInputForm,
 	useMessageActions,
 } from "@/features/ai-chat";
 import { ChatHistoryList } from "@/features/ai-chat/components/chat-history-list";
+import { useChat } from "@/features/ai-chat/hooks/use-chat";
 import { useChatActions } from "@/features/ai-chat/hooks/use-chat-actions";
 import { useChatInitializationLogic } from "@/features/ai-chat/hooks/use-chat-initialization";
 import { useChatScroll } from "@/features/ai-chat/hooks/use-chat-scroll";
-import { useHybridChatMessages } from "@/features/ai-chat/hooks/use-hybrid-chat-messages";
 import { useParsedMessages } from "@/features/ai-chat/hooks/use-parsed-messages";
 import { useAuth } from "@clerk/tanstack-react-start";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -54,7 +53,7 @@ function ChatThreadPage() {
 		append,
 		setMessages: setStreamingMessages,
 		isTokenLoaded,
-	} = useHybridChatMessages({ threadId });
+	} = useChat({ threadId });
 
 	// 3. View Logic Extraction
 	const parsedMessages = useParsedMessages(uiMessages, isLoading);
@@ -138,7 +137,6 @@ function ChatThreadPage() {
 
 	return (
 		<div className="flex flex-col h-[calc(100vh-3.5rem)] max-w-4xl mx-auto">
-			<style>{BLINK_ANIMATION_CSS}</style>
 			<ChatHeader
 				hasMessages={uiMessages.length > 0}
 				isLoading={isLoading}
@@ -176,14 +174,14 @@ function ChatThreadPage() {
 						<span className="sr-only">Jump to bottom</span>
 					</Button>
 				)}
-			<ChatInputForm
-				onSubmit={handleSubmit}
-				onStop={stop}
-				isLoading={isLoading || !isTokenLoaded}
-				isThinkingEnabled={isThinkingEnabled}
-				onThinkingToggle={() => setIsThinkingEnabled(!isThinkingEnabled)}
-			/>
+				<ChatInputForm
+					onSubmit={handleSubmit}
+					onStop={stop}
+					isLoading={isLoading || !isTokenLoaded}
+					isThinkingEnabled={isThinkingEnabled}
+					onThinkingToggle={() => setIsThinkingEnabled(!isThinkingEnabled)}
+				/>
+			</div>
 		</div>
-	</div>
 	);
 }

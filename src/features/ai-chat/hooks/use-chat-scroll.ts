@@ -38,6 +38,8 @@ function getLastMessageFingerprint(
 	return `${last.id}:${parts.length}:${contentLength}`;
 }
 
+const PINNED_TO_BOTTOM_THRESHOLD_PX = 12;
+
 export function useChatScroll(
 	messages: UIMessage[] | ParsedMessage[],
 	isLoading: boolean,
@@ -47,47 +49,17 @@ export function useChatScroll(
 	) as RefObject<HTMLDivElement>;
 
 	const [isPinnedToBottom, setIsPinnedToBottom] = useState(true);
-	const [showScrollToBottom, setShowScrollToBottom] = useState(false);
 	const isPinnedToBottomRef = useRef(isPinnedToBottom);
 	const hasPerformedInitialScrollRef = useRef(false);
-	const scrollButtonTimerRef = useRef<number | null>(null);
 
 	useEffect(() => {
 		isPinnedToBottomRef.current = isPinnedToBottom;
 	}, [isPinnedToBottom]);
 
-	// Handle delayed visibility of scroll-to-bottom button
-	useEffect(() => {
-		if (isPinnedToBottom) {
-			// User is at bottom - hide button immediately and clear any pending timer
-			if (scrollButtonTimerRef.current !== null) {
-				window.clearTimeout(scrollButtonTimerRef.current);
-				scrollButtonTimerRef.current = null;
-			}
-			setShowScrollToBottom(false);
-		} else {
-			// User scrolled away from bottom - show button after 1 second delay
-			if (scrollButtonTimerRef.current === null) {
-				scrollButtonTimerRef.current = window.setTimeout(() => {
-					setShowScrollToBottom(true);
-					scrollButtonTimerRef.current = null;
-				}, 1000);
-			}
-		}
-
-		return () => {
-			if (scrollButtonTimerRef.current !== null) {
-				window.clearTimeout(scrollButtonTimerRef.current);
-			}
-		};
-	}, [isPinnedToBottom]);
-
-	const nearBottomThresholdPx = 80;
-
 	const getIsNearBottom = useCallback((viewport: HTMLDivElement): boolean => {
 		const distanceFromBottom =
 			viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
-		return distanceFromBottom <= nearBottomThresholdPx;
+		return distanceFromBottom <= PINNED_TO_BOTTOM_THRESHOLD_PX;
 	}, []);
 
 	const scrollToBottom = useCallback((behavior: ScrollBehavior) => {
@@ -100,7 +72,6 @@ export function useChatScroll(
 	}, []);
 
 	const pinToBottom = useCallback(() => {
-		setShowScrollToBottom(false);
 		setIsPinnedToBottom(true);
 		scrollToBottom("smooth");
 	}, [scrollToBottom]);
@@ -138,7 +109,6 @@ export function useChatScroll(
 
 		if (!hasPerformedInitialScrollRef.current && messages.length > 0) {
 			hasPerformedInitialScrollRef.current = true;
-			setShowScrollToBottom(false);
 			setIsPinnedToBottom(true);
 			scrollToBottom("auto");
 			return;
@@ -154,6 +124,8 @@ export function useChatScroll(
 			return;
 		}
 	}, [lastMessageFingerprint, isLoading, messages.length, scrollToBottom]);
+
+	const showScrollToBottom = !isPinnedToBottom;
 
 	return {
 		scrollViewportRef,

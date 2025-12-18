@@ -5,14 +5,7 @@ import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import { triggerTitleGeneration } from "../lib/title-generation";
 
-export function useChatInitializationLogic({
-	threadId,
-	initialInput,
-	clearInitialInput,
-	append,
-	isTokenLoaded,
-	getToken,
-}: {
+interface UseChatInitializationLogicProps {
 	threadId: string;
 	initialInput?: string;
 	clearInitialInput: () => void;
@@ -21,24 +14,36 @@ export function useChatInitializationLogic({
 	) => Promise<void>;
 	isTokenLoaded: boolean;
 	getToken: () => Promise<string | null>;
-}) {
+}
+
+/**
+ * Handle initial input from URL params (e.g., when creating a new chat with a message).
+ * Uses fire-and-forget persistence for a rapid UI experience.
+ */
+export function useChatInitializationLogic({
+	threadId,
+	initialInput,
+	clearInitialInput,
+	append,
+	isTokenLoaded,
+	getToken,
+}: UseChatInitializationLogicProps) {
 	const addMessage = useMutation(api.messages.add);
 	const hasTriggeredInitial = useRef(false);
 
 	useEffect(() => {
-		if (initialInput && isTokenLoaded && !hasTriggeredInitial.current) {
-			hasTriggeredInitial.current = true;
+		if (!initialInput || !isTokenLoaded || hasTriggeredInitial.current) return;
 
-			const run = async () => {
-				// 1. Save to Convex
-				const { isFirstMessage, messageId } = await addMessage({
-					threadId: threadId as Id<"threads">,
-					role: "user",
-					content: initialInput,
-				});
+		hasTriggeredInitial.current = true;
 
-				// 2. Trigger AI title generation if this is the first message
-				// Fire-and-forget: don't await, don't block the chat
+		// Fire-and-forget persistence
+		addMessage({
+			threadId: threadId as Id<"threads">,
+			role: "user",
+			content: initialInput,
+		})
+			.then(({ isFirstMessage }) => {
+				// Trigger title generation for first message (fire-and-forget)
 				if (isFirstMessage) {
 					getToken().then((token) => {
 						if (token) {
@@ -46,20 +51,16 @@ export function useChatInitializationLogic({
 						}
 					});
 				}
+			})
+			.catch((err) => {
+				console.error("Failed to persist initial message:", err);
+			});
 
-				// 3. Trigger AI
-				await append({
-					id: messageId,
-					role: "user",
-					parts: [{ type: "text", content: initialInput }],
-				} satisfies UIMessage);
-
-				// 4. Clear URL param
-				clearInitialInput();
-			};
-
-			run();
-		}
+		// Immediately trigger the stream - don't wait for persistence
+		append({ role: "user", content: initialInput }).then(() => {
+			// Clear URL param after stream starts
+			clearInitialInput();
+		});
 	}, [
 		initialInput,
 		isTokenLoaded,
