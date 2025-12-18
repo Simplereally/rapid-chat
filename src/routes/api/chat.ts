@@ -1,9 +1,9 @@
-import { chat, toStreamResponse } from "@tanstack/ai";
+import { env } from "@/env";
+import { webSearchTool } from "@/tools";
+import { chat, type ModelMessage, toStreamResponse } from "@tanstack/ai";
 import { ollama } from "@tanstack/ai-ollama";
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { env } from "@/env";
-import { webSearchTool } from "@/tools";
 
 /**
  * Available tools for the chat model.
@@ -24,10 +24,12 @@ const BASE_SYSTEM_PROMPT = `You are a helpful assistant with tool-calling capabi
 
 Use tools when you need current information or capabilities beyond your training data. After receiving tool results, integrate them naturally into your response with proper attribution. If no tool is needed, answer directly.`;
 
-const MessageSchema = z.object({
-	role: z.enum(["system", "user", "assistant"]),
-	content: z.string(),
-});
+const MessageSchema = z
+	.object({
+		role: z.enum(["system", "user", "assistant", "tool"]),
+		content: z.string(),
+	})
+	.strict(); // Allow additional fields like toolCalls, toolCallId without validation
 
 const ChatRequestSchema = z.object({
 	messages: z.array(MessageSchema),
@@ -40,6 +42,11 @@ export const Route = createFileRoute("/api/chat")({
 				try {
 					const url = new URL(request.url);
 					const threadId = url.searchParams.get("threadId");
+
+					// DIAGNOSTIC: Log when request hits server
+					console.log(
+						`[SERVER] Chat request received for thread ${threadId} at ${Date.now()}`,
+					);
 
 					if (!threadId) {
 						return new Response("Missing threadId", { status: 400 });
@@ -67,13 +74,24 @@ export const Route = createFileRoute("/api/chat")({
 					// Combine base system prompt with any client-provided prompts
 					const allSystemPrompts = [BASE_SYSTEM_PROMPT, ...clientSystemPrompts];
 
-					const conversationMessages = incomingMessages.filter(
-						(m): m is { role: "user" | "assistant"; content: string } =>
-							m.role === "user" || m.role === "assistant",
-					);
+					const conversationMessages: Array<ModelMessage<string | null>> =
+						incomingMessages.filter(
+							(
+								m,
+							): m is {
+								role: "user" | "assistant" | "tool";
+								content: string;
+							} =>
+								m.role === "user" ||
+								m.role === "assistant" ||
+								m.role === "tool",
+						);
 
 					// Stream the chat response - no DB persistence here
 					// Client handles persistence via onFinish callback
+					console.log(
+						`[SERVER] Thread ${threadId} - creating chat stream at ${Date.now()}`,
+					);
 					const stream = chat({
 						adapter: ollama({
 							baseUrl: env.OLLAMA_BASE_URL,
@@ -84,6 +102,9 @@ export const Route = createFileRoute("/api/chat")({
 						tools: availableTools,
 					});
 
+					console.log(
+						`[SERVER] Thread ${threadId} - returning streaming response at ${Date.now()}`,
+					);
 					return toStreamResponse(stream);
 				} catch (e) {
 					console.error(e);

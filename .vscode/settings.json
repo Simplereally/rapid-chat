@@ -1,13 +1,58 @@
 {
+	// ==================== TypeScript Language Server Settings ====================
+	// Force VSCode to use the workspace TypeScript version (prevents version mismatches)
+	"typescript.tsdk": "node_modules/typescript/lib",
+	"typescript.enablePromptUseWorkspaceTsdk": true,
+
+	// Aggressive TypeScript server restart and cache clearing
+	"typescript.tsserver.maxTsServerMemory": 8192,
+	"typescript.tsserver.experimental.enableProjectDiagnostics": false,
+	"typescript.disableAutomaticTypeAcquisition": false,
+
+	// Auto-restart TS server on config changes to prevent stale errors
+	"typescript.tsserver.watchOptions": {
+		"watchFile": "useFsEvents",
+		"watchDirectory": "useFsEvents",
+		"fallbackPolling": "dynamicPriority"
+	},
+
+	// Enable more aggressive diagnostics updates
+	"typescript.updateImportsOnFileMove.enabled": "always",
+	"typescript.preferences.autoImportFileExcludePatterns": [
+		"**/routeTree.gen.ts"
+	],
+
+	// JavaScript/TypeScript validation
+	"javascript.validate.enable": true,
+	"typescript.validate.enable": true,
+
+	// Survey options to reduce interruptions
+	"typescript.surveys.enabled": false,
+
+	// ==================== File Watching & Performance ====================
 	"files.watcherExclude": {
-		"**/routeTree.gen.ts": true
+		"**/routeTree.gen.ts": true,
+		"**/.git/objects/**": true,
+		"**/.git/subtree-cache/**": true,
+		"**/node_modules/**": true,
+		"**/.convex/**": true,
+		"**/dist/**": true,
+		"**/.next/**": true
 	},
 	"search.exclude": {
-		"**/routeTree.gen.ts": true
+		"**/routeTree.gen.ts": true,
+		"**/node_modules": true,
+		"**/dist": true,
+		"**/.convex": true
 	},
 	"files.readonlyInclude": {
 		"**/routeTree.gen.ts": true
 	},
+
+	// Prevent VSCode from auto-saving too aggressively (can cause TS server confusion)
+	"files.autoSave": "onFocusChange",
+
+	// ==================== Biome Formatter Settings ====================
 	"[javascript]": {
 		"editor.defaultFormatter": "biomejs.biome"
 	},
@@ -31,5 +76,14 @@
 	},
 	"editor.codeActionsOnSave": {
 		"source.organizeImports.biome": "explicit"
+	},
+
+	// ==================== Editor Settings ====================
+	// Format on save to ensure consistency
+	"editor.formatOnSave": true,
+
+	// Disable quick suggestions in strings/comments to reduce TS server load
+	"editor.quickSuggestions": {
+		"strings": false
 	}
 }

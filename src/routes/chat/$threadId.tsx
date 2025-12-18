@@ -1,8 +1,3 @@
-import { useAuth } from "@clerk/tanstack-react-start";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "convex/react";
-import { ArrowDown, Loader2 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
 	ChatHeader,
@@ -15,6 +10,13 @@ import { useChatActions } from "@/features/ai-chat/hooks/use-chat-actions";
 import { useChatInitializationLogic } from "@/features/ai-chat/hooks/use-chat-initialization";
 import { useChatScroll } from "@/features/ai-chat/hooks/use-chat-scroll";
 import { useParsedMessages } from "@/features/ai-chat/hooks/use-parsed-messages";
+import { useChatClientStore } from "@/stores/chat-client-store";
+import { useAuth } from "@clerk/tanstack-react-start";
+import type { UIMessage } from "@tanstack/ai-react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "convex/react";
+import { ArrowDown, Loader2 } from "lucide-react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 
@@ -49,45 +51,63 @@ function ChatThreadPage() {
 		threadId: threadId as Id<"threads">,
 	});
 
-	// 3. TanStack AI Chat State with cross-tab sync
-	const { messages, isLoading, stop, append, setMessages, isTokenLoaded } =
-		useChat({
-			threadId,
-		});
+	// 3. Get streaming state from Zustand (ephemeral)
+	// Use a stable empty array reference to prevent infinite re-renders
+	const EMPTY_MESSAGES: UIMessage[] = useRef<UIMessage[]>([]).current;
+	const streamingMessages = useChatClientStore(
+		(state) => state.clients.get(threadId)?.messages ?? EMPTY_MESSAGES,
+	);
 
-	// 4. View Logic Extraction
-	const parsedMessages = useParsedMessages(messages, isLoading);
+	// 4. TanStack AI Chat State
+	const { isLoading, stop, append, isTokenLoaded } = useChat({
+		threadId,
+	});
 
-	// 5. Hydrate messages when navigating to a different thread
-	const lastThreadIdRef = useRef<string | null>(null);
+	// 5. Merge Convex (persisted) + Zustand (streaming) messages for display
+	// User messages: Only from Convex (single source of truth)
+	// Assistant messages: From streaming state during active stream, then from Convex after persistence
+	const displayMessages = useMemo(() => {
+		if (!convexMessages) return streamingMessages;
 
-	useEffect(() => {
-		// When thread changes, load its messages from Convex
-		if (convexMessages !== undefined && threadId !== lastThreadIdRef.current) {
-			lastThreadIdRef.current = threadId;
+		// Convert Convex messages to UI format
+		const persistedMessages = convexMessages.map((msg) => ({
+			id: msg._id,
+			role: msg.role as "user" | "assistant",
+			parts: [{ type: "text" as const, content: msg.content }],
+			createdAt: msg.createdAt ? new Date(msg.createdAt) : undefined,
+		}));
 
-			const hydratedMessages = convexMessages.map((msg) => ({
-				id: msg._id,
-				role: msg.role as "user" | "assistant",
-				parts: [{ type: "text" as const, content: msg.content }],
-				createdAt: msg.createdAt ? new Date(msg.createdAt) : undefined,
-			}));
-			setMessages(hydratedMessages);
+		// If no streaming messages, return persisted only
+		if (streamingMessages.length === 0) {
+			return persistedMessages;
 		}
-	}, [convexMessages, threadId, setMessages]);
 
-	// 6. UI Actions & State
+		// Only include ASSISTANT messages from streaming state that aren't in Convex yet
+		// This prevents duplicate user messages since ChatClient.sendMessage() adds one internally
+		// and we also persist to Convex
+		const newStreamingAssistantMessages = streamingMessages.filter(
+			(streamMsg) =>
+				streamMsg.role === "assistant" &&
+				!persistedMessages.some((convexMsg) => convexMsg.id === streamMsg.id),
+		);
+
+		// Merge: Convex messages + new streaming assistant messages
+		return [...persistedMessages, ...newStreamingAssistantMessages];
+	}, [convexMessages, streamingMessages]);
+
+	// 6. View Logic Extraction
+	const parsedMessages = useParsedMessages(displayMessages, isLoading);
+
+	// 7. UI Actions & State
 	const { initialThinking, initialInput } = Route.useSearch();
 	const [isThinkingEnabled, setIsThinkingEnabled] = useState(
 		initialThinking ?? true,
 	);
 
-	// 7. Hooks: Actions, Scroll, Init
+	// 8. Hooks: Actions, Scroll, Init
 	const { handleSubmit, clearConversation } = useChatActions({
 		threadId,
 		isThinkingEnabled,
-		append,
-		setStreamingMessages: setMessages,
 		isLoading,
 		getToken: () => auth.getToken({ template: "convex" }),
 	});
@@ -123,9 +143,17 @@ function ChatThreadPage() {
 		[append],
 	);
 
+	// Set messages helper for message actions (regenerate, edit)
+	const setMessages = useCallback(
+		(messages: UIMessage[]) => {
+			useChatClientStore.getState().setMessages(threadId, messages);
+		},
+		[threadId],
+	);
+
 	// Re-bind messageActions with correct methods
 	const activeMessageActions = useMessageActions({
-		messages,
+		messages: displayMessages,
 		setMessages,
 		sendMessage: adaptSendMessage,
 		isLoading,
@@ -161,7 +189,7 @@ function ChatThreadPage() {
 	return (
 		<div className="flex flex-col h-[calc(100vh-3.5rem)] max-w-4xl mx-auto">
 			<ChatHeader
-				hasMessages={messages.length > 0}
+				hasMessages={displayMessages.length > 0}
 				isLoading={isLoading}
 				onClear={clearConversation}
 				title={thread?.title ?? "Chat"}

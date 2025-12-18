@@ -27,7 +27,7 @@ const webSearchOutputSchema = z.object({
 		.array(
 			z.object({
 				title: z.string().describe("Title of the search result"),
-				url: z.string().url().describe("Source URL"),
+				url: z.url().describe("Source URL"),
 				content: z.string().describe("Relevant content excerpt from the page"),
 				score: z.number().describe("Relevance score (0-1)"),
 			}),

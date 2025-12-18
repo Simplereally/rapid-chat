@@ -19,6 +19,7 @@
 	},
 	"formatter": {
 		"enabled": true,
+		"formatWithErrors": true,
 		"indentStyle": "tab",
 		"lineEnding": "lf"
 	},

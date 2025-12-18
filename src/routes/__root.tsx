@@ -1,3 +1,7 @@
+import { ModeToggle } from "@/components/mode-toggle";
+import { ThemeProvider } from "@/components/theme-provider";
+import { env } from "@/env";
+import { initializeCrossTabSync } from "@/stores/chat-client-store";
 import { ClerkProvider, useAuth } from "@clerk/tanstack-react-start";
 import type { ConvexQueryClient } from "@convex-dev/react-query";
 import { TanStackDevtools } from "@tanstack/react-devtools";
@@ -13,9 +17,7 @@ import {
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import type { ConvexReactClient } from "convex/react";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
-import { ModeToggle } from "@/components/mode-toggle";
-import { ThemeProvider } from "@/components/theme-provider";
-import { env } from "@/env";
+import { useEffect } from "react";
 import appCss from "../../app.css?url";
 import themeCss from "../../index.css?url";
 import baseCss from "../styles.css?url";
@@ -121,6 +123,11 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+	// Initialize cross-tab sync for streaming messages on mount
+	useEffect(() => {
+		initializeCrossTabSync();
+	}, []);
+
 	const showDevtools =
 		process.env.NODE_ENV !== "production" &&
 		env.VITE_TANSTACK_DEVTOOLS === "true";

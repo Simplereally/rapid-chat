@@ -1,6 +1,7 @@
 import type { UIMessage } from "@tanstack/ai-react";
 import { useMutation } from "convex/react";
 import { useCallback, useRef } from "react";
+import { useChatClientStore } from "@/stores/chat-client-store";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import { triggerTitleGeneration } from "../lib/title-generation";
@@ -8,10 +9,6 @@ import { triggerTitleGeneration } from "../lib/title-generation";
 interface UseChatActionsProps {
 	threadId: string;
 	isThinkingEnabled: boolean;
-	append: (
-		message: { role: "user"; content: string } | UIMessage,
-	) => Promise<void>;
-	setStreamingMessages: (messages: UIMessage[]) => void;
 	isLoading: boolean;
 	getToken: () => Promise<string | null>;
 }
@@ -23,8 +20,6 @@ interface UseChatActionsProps {
 export function useChatActions({
 	threadId,
 	isThinkingEnabled,
-	append,
-	setStreamingMessages,
 	isLoading,
 	getToken,
 }: UseChatActionsProps) {
@@ -35,8 +30,8 @@ export function useChatActions({
 	const hasTitleBeenGenerated = useRef(false);
 
 	/**
-	 * Fire-and-forget user message persistence.
-	 * Returns immediately - UI doesn't wait for Convex.
+	 * User message persistence with Convex's built-in retry.
+	 * Convex automatically handles retries and optimistic updates.
 	 */
 	const persistUserMessage = (content: string): void => {
 		addMessage({
@@ -44,9 +39,9 @@ export function useChatActions({
 			role: "user",
 			content,
 		})
-			.then(({ isFirstMessage }) => {
-				// Trigger title generation for first message (fire-and-forget)
-				if (isFirstMessage && !hasTitleBeenGenerated.current) {
+			.then((result) => {
+				// Trigger title generation for first message
+				if (result.isFirstMessage && !hasTitleBeenGenerated.current) {
 					hasTitleBeenGenerated.current = true;
 					getToken().then((token) => {
 						if (token) {
@@ -57,27 +52,67 @@ export function useChatActions({
 			})
 			.catch((err) => {
 				console.error("Failed to persist user message:", err);
+				// Convex will retry automatically
 			});
 	};
 
-	const handleSubmit = async (chatInput: string): Promise<void> => {
+	const handleSubmit = (chatInput: string): void => {
 		if (!chatInput.trim() || isLoading) return;
 
 		const thinkPrefix = isThinkingEnabled ? "/think " : "/no_think ";
 		const fullContent = thinkPrefix + chatInput;
 
-		// 1. Fire-and-forget persistence - don't block the UI
-		persistUserMessage(fullContent);
+		// Get token first - we need this synchronously, but getToken is async
+		// Use a self-invoking async function to handle this
+		(async () => {
+			const token = await getToken();
+			if (!token) {
+				console.error("Authentication required");
+				return;
+			}
 
-		// 2. Immediately trigger the stream (TanStack AI generates the message ID)
-		await append({ role: "user", content: fullContent });
+			// Configure persistence callback for assistant response
+			const persistAssistantMessage = async (message: UIMessage) => {
+				const content = message.parts
+					.filter((part) => part.type === "text" || part.type === "thinking")
+					.map((part) => part.content)
+					.join("");
+
+				// Convex handles retries automatically
+				await addMessage({
+					threadId: threadId as Id<"threads">,
+					role: "assistant",
+					content,
+				});
+
+				// After successful Convex persistence, nuke the streaming state
+				useChatClientStore.getState().nukeStreamingState(threadId);
+			};
+
+			// Persist user message immediately before starting stream
+			persistUserMessage(fullContent);
+
+			// Fire and forget - startChatRequest manages stream lifecycle via callbacks
+			useChatClientStore.getState().startChatRequest({
+				threadId,
+				content: fullContent,
+				apiEndpoint: `/api/chat?threadId=${threadId}`,
+				getAuthHeaders: async () => ({
+					Authorization: `Bearer ${token}`,
+				}),
+				onFinish: persistAssistantMessage,
+				onError: (error) => {
+					console.error("Stream error:", error);
+				},
+			});
+		})();
 	};
 
 	const clearConversation = useCallback(async (): Promise<void> => {
 		if (isLoading) return;
 
-		// Clear UI immediately for responsive feedback
-		setStreamingMessages([]);
+		// Clear Zustand streaming state immediately for responsive feedback
+		useChatClientStore.getState().setMessages(threadId, []);
 
 		// Fire-and-forget database cleanup
 		clearThreadMessages({ threadId: threadId as Id<"threads"> }).catch(
@@ -88,7 +123,7 @@ export function useChatActions({
 
 		// Reset title generation flag
 		hasTitleBeenGenerated.current = false;
-	}, [isLoading, clearThreadMessages, threadId, setStreamingMessages]);
+	}, [isLoading, clearThreadMessages, threadId]);
 
 	return {
 		handleSubmit,

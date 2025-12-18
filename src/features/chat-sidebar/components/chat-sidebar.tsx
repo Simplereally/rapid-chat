@@ -4,6 +4,7 @@ import { useClerk, useUser } from "@clerk/tanstack-react-start";
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import { useMutation, useQuery } from "convex/react";
 import {
+	Check,
 	Loader2,
 	LogOut,
 	MessageSquare,
@@ -60,6 +61,30 @@ import {
 import { cn } from "@/lib/utils";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
+import {
+	useThreadIsUnread,
+	useThreadStreamingStatus,
+} from "../../../stores/chat-client-store";
+
+// Thread row component with streaming/unread indicators
+function ThreadRow({
+	threadId,
+	title,
+}: Readonly<{ threadId: Id<"threads">; title: string }>) {
+	const streamingStatus = useThreadStreamingStatus(threadId);
+	const isUnread = useThreadIsUnread(threadId);
+
+	return (
+		<>
+			<MessageSquare className="h-4 w-4 shrink-0 opacity-60" />
+			<span className="truncate flex-1 min-w-0">{title}</span>
+			{streamingStatus === "streaming" && (
+				<Loader2 className="h-3 w-3 shrink-0 animate-spin text-primary" />
+			)}
+			{isUnread && <Check className="h-3 w-3 shrink-0 text-green-500" />}
+		</>
+	);
+}
 
 export function ChatSidebar() {
 	const threads = useQuery(api.threads.list);
@@ -242,10 +267,10 @@ export function ChatSidebar() {
 														onClick={handleThreadClick}
 														className="flex items-center gap-2 overflow-hidden min-w-0"
 													>
-														<MessageSquare className="h-4 w-4 shrink-0 opacity-60" />
-														<span className="truncate flex-1 min-w-0">
-															{thread.title}
-														</span>
+														<ThreadRow
+															threadId={thread._id}
+															title={thread.title}
+														/>
 													</Link>
 												</SidebarMenuButton>
 												<DropdownMenu>
