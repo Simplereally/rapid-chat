@@ -1,19 +1,5 @@
 "use client";
 
-import { useClerk, useUser } from "@clerk/tanstack-react-start";
-import { Link, useNavigate, useParams } from "@tanstack/react-router";
-import { useMutation, useQuery } from "convex/react";
-import {
-	Check,
-	Loader2,
-	LogOut,
-	MessageSquare,
-	MessageSquarePlus,
-	MoreHorizontal,
-	Pencil,
-	Trash2,
-} from "lucide-react";
-import { useState } from "react";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -59,6 +45,22 @@ import {
 	useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+import { useClerk, useUser } from "@clerk/tanstack-react-start";
+import { Link, useNavigate, useParams } from "@tanstack/react-router";
+import { useMutation, useQuery } from "convex/react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+	Check,
+	Loader2,
+	LogOut,
+	MessageSquare,
+	MessageSquarePlus,
+	MoreHorizontal,
+	Pencil,
+	Trash2,
+	X,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import {
@@ -107,6 +109,23 @@ export function ChatSidebar() {
 
 	const currentThreadId = params.threadId as Id<"threads"> | undefined;
 
+	const [isShiftPressed, setIsShiftPressed] = useState(false);
+
+	useEffect(() => {
+		const handleKeyDown = (e: KeyboardEvent) => {
+			if (e.key === "Shift") setIsShiftPressed(true);
+		};
+		const handleKeyUp = (e: KeyboardEvent) => {
+			if (e.key === "Shift") setIsShiftPressed(false);
+		};
+		window.addEventListener("keydown", handleKeyDown);
+		window.addEventListener("keyup", handleKeyUp);
+		return () => {
+			window.removeEventListener("keydown", handleKeyDown);
+			window.removeEventListener("keyup", handleKeyUp);
+		};
+	}, []);
+
 	const handleNewChat = async () => {
 		setIsCreating(true);
 		try {
@@ -124,14 +143,15 @@ export function ChatSidebar() {
 		}
 	};
 
-	const handleDeleteThread = async () => {
-		if (!threadToDelete) return;
+	const handleDeleteThread = async (id?: Id<"threads">) => {
+		const threadId = id ?? threadToDelete;
+		if (!threadId) return;
 
-		await deleteThread({ threadId: threadToDelete });
-		setThreadToDelete(null);
+		await deleteThread({ threadId });
+		if (!id) setThreadToDelete(null);
 
 		// If we deleted the current thread, navigate to new chat
-		if (currentThreadId === threadToDelete) {
+		if (currentThreadId === threadId) {
 			navigate({ to: "/chat" });
 		}
 	};
@@ -273,11 +293,62 @@ export function ChatSidebar() {
 														/>
 													</Link>
 												</SidebarMenuButton>
-												<DropdownMenu>
+												<DropdownMenu open={isShiftPressed ? false : undefined}>
 													<DropdownMenuTrigger asChild>
-														<SidebarMenuAction showOnHover>
-															<MoreHorizontal className="h-4 w-4" />
-															<span className="sr-only">More options</span>
+														<SidebarMenuAction
+															showOnHover
+															onClick={(e) => {
+																if (e.shiftKey) {
+																	e.preventDefault();
+																	e.stopPropagation();
+																	handleDeleteThread(thread._id);
+																}
+															}}
+															className={cn(
+																isShiftPressed &&
+																	"text-destructive hover:text-destructive hover:bg-destructive/10",
+															)}
+														>
+															<AnimatePresence mode="wait" initial={false}>
+																{isShiftPressed ? (
+																	<motion.div
+																		key="delete"
+																		initial={{
+																			opacity: 0,
+																			scale: 0.5,
+																			rotate: -90,
+																		}}
+																		animate={{
+																			opacity: 1,
+																			scale: 1,
+																			rotate: 0,
+																		}}
+																		exit={{
+																			opacity: 0,
+																			scale: 0.5,
+																			rotate: 90,
+																		}}
+																		transition={{ duration: 0.15 }}
+																	>
+																		<X className="h-6 w-6" />
+																	</motion.div>
+																) : (
+																	<motion.div
+																		key="more"
+																		initial={{ opacity: 0, scale: 0.5 }}
+																		animate={{ opacity: 1, scale: 1 }}
+																		exit={{ opacity: 0, scale: 0.5 }}
+																		transition={{ duration: 0.15 }}
+																	>
+																		<MoreHorizontal className="h-6 w-6" />
+																	</motion.div>
+																)}
+															</AnimatePresence>
+															<span className="sr-only">
+																{isShiftPressed
+																	? "Delete thread"
+																	: "More options"}
+															</span>
 														</SidebarMenuAction>
 													</DropdownMenuTrigger>
 													<DropdownMenuContent side="right" align="start">
@@ -426,7 +497,7 @@ export function ChatSidebar() {
 					<AlertDialogFooter>
 						<AlertDialogCancel>Cancel</AlertDialogCancel>
 						<AlertDialogAction
-							onClick={handleDeleteThread}
+							onClick={() => handleDeleteThread()}
 							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
 						>
 							Delete

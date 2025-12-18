@@ -1,5 +1,3 @@
-import { Brain, Send, Square } from "lucide-react";
-import { useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -7,6 +5,9 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useIsOllamaRunning } from "@/stores/ollama-store";
+import { AlertTriangle, Brain, Send, Square } from "lucide-react";
+import { useCallback, useRef } from "react";
 
 interface ChatInputFormProps {
 	onSubmit: (content: string) => void | Promise<void>;
@@ -27,11 +28,12 @@ export function ChatInputForm({
 	onThinkingToggle,
 }: ChatInputFormProps) {
 	const inputRef = useRef<HTMLInputElement | null>(null);
+	const isOllamaRunning = useIsOllamaRunning();
 
 	const handleSubmit = useCallback(
 		async (e: React.FormEvent) => {
 			e.preventDefault();
-			if (isLoading) return;
+			if (isLoading || !isOllamaRunning) return;
 
 			const rawValue = inputRef.current?.value ?? "";
 			const content = rawValue.trim();
@@ -43,7 +45,7 @@ export function ChatInputForm({
 				inputRef.current.value = "";
 			}
 		},
-		[isLoading, onSubmit],
+		[isLoading, onSubmit, isOllamaRunning],
 	);
 
 	return (
@@ -56,6 +58,7 @@ export function ChatInputForm({
 						variant={isThinkingEnabled ? "outline" : "ghost"}
 						size="icon"
 						onClick={onThinkingToggle}
+						disabled={!isOllamaRunning}
 						className={
 							isThinkingEnabled
 								? "bg-primary/10 border-primary text-primary hover:bg-primary/20"
@@ -69,17 +72,37 @@ export function ChatInputForm({
 					</Button>
 				</TooltipTrigger>
 				<TooltipContent>
-					{isThinkingEnabled ? "Thinking enabled" : "Thinking disabled"}
+					{!isOllamaRunning
+						? "Start Ollama to chat"
+						: isThinkingEnabled
+							? "Thinking enabled"
+							: "Thinking disabled"}
 				</TooltipContent>
 			</Tooltip>
 
-			<Input
-				type="text"
-				ref={inputRef}
-				placeholder="Ask something..."
-				className="flex-1"
-				disabled={isLoading}
-			/>
+			<div className="relative flex-1">
+				<Input
+					type="text"
+					ref={inputRef}
+					placeholder={
+						isOllamaRunning ? "Ask something..." : "Ollama is not running..."
+					}
+					className="pr-10"
+					disabled={isLoading || !isOllamaRunning}
+				/>
+				{!isOllamaRunning && (
+					<div className="absolute right-3 top-1/2 -translate-y-1/2 text-amber-500">
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<AlertTriangle className="h-4 w-4" />
+							</TooltipTrigger>
+							<TooltipContent>
+								Ollama must be running to send messages
+							</TooltipContent>
+						</Tooltip>
+					</div>
+				)}
+			</div>
 
 			{isLoading ? (
 				<Tooltip>
@@ -99,12 +122,18 @@ export function ChatInputForm({
 			) : (
 				<Tooltip>
 					<TooltipTrigger asChild>
-						<Button type="submit" size="icon" disabled={isLoading}>
+						<Button
+							type="submit"
+							size="icon"
+							disabled={isLoading || !isOllamaRunning}
+						>
 							<Send className="h-4 w-4" />
 							<span className="sr-only">Send</span>
 						</Button>
 					</TooltipTrigger>
-					<TooltipContent>Send message</TooltipContent>
+					<TooltipContent>
+						{isOllamaRunning ? "Send message" : "Ollama not running"}
+					</TooltipContent>
 				</Tooltip>
 			)}
 		</form>
