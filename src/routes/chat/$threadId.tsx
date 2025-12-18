@@ -131,6 +131,7 @@ function ChatThreadPage() {
 		isThinkingEnabled,
 		isLoading,
 		getToken: () => auth.getToken({ template: "convex" }),
+		convexMessages,
 	});
 
 	const { scrollViewportRef, showScrollToBottom, pinToBottom } = useChatScroll(

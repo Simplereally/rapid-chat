@@ -11,6 +11,8 @@ interface UseChatActionsProps {
 	isThinkingEnabled: boolean;
 	isLoading: boolean;
 	getToken: () => Promise<string | null>;
+	/** Persisted messages from Convex for conversation context */
+	convexMessages?: Array<{ _id: string; role: string; content: string }> | null;
 }
 
 /**
@@ -22,6 +24,7 @@ export function useChatActions({
 	isThinkingEnabled,
 	isLoading,
 	getToken,
+	convexMessages,
 }: UseChatActionsProps) {
 	const addMessage = useMutation(api.messages.add);
 	const clearThreadMessages = useMutation(api.messages.clearThread);
@@ -100,6 +103,12 @@ export function useChatActions({
 				getAuthHeaders: async () => ({
 					Authorization: `Bearer ${token}`,
 				}),
+				// Pass conversation history so the LLM has full context
+				conversationHistory: convexMessages?.map((msg) => ({
+					id: msg._id,
+					role: msg.role as "user" | "assistant",
+					content: msg.content,
+				})),
 				onFinish: persistAssistantMessage,
 				onError: (error) => {
 					console.error("Stream error:", error);

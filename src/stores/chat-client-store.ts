@@ -31,6 +31,8 @@ export interface ChatRequestConfig {
 	content: string;
 	apiEndpoint: string;
 	getAuthHeaders: () => Promise<Record<string, string>>;
+	/** Conversation history to load into the ChatClient before sending the new message */
+	conversationHistory?: Array<{ role: "user" | "assistant"; content: string; id?: string }>;
 	onFinish?: (message: UIMessage) => void | Promise<void>;
 	onError?: (error: Error) => void;
 }
@@ -111,6 +113,7 @@ export const useChatClientStore = create<ChatStore>()(
 					content,
 					apiEndpoint,
 					getAuthHeaders,
+					conversationHistory,
 					onFinish,
 					onError,
 				} = config;
@@ -291,6 +294,18 @@ export const useChatClientStore = create<ChatStore>()(
 					}
 					return { clients: updated };
 				});
+
+				// Load conversation history into the ChatClient BEFORE sending the new message
+				// This ensures the LLM has full context of the conversation
+				if (conversationHistory && conversationHistory.length > 0) {
+					const historyAsUIMessages: UIMessage[] = conversationHistory.map((msg, index) => ({
+						id: msg.id || `history-${index}`,
+						role: msg.role,
+						parts: [{ type: "text" as const, content: msg.content }],
+						createdAt: new Date(),
+					}));
+					client.setMessagesManually(historyAsUIMessages);
+				}
 
 				// Fire and forget - don't await sendMessage!
 				// ChatClient handles state updates via callbacks (onMessagesChange, onFinish, onError)
