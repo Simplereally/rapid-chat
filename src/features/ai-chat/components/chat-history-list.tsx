@@ -1,6 +1,6 @@
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Bot } from "lucide-react";
 import type { RefObject } from "react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import type { ParsedMessage } from "../types";
 import { ChatMessage } from "./chat-message";
 
@@ -50,13 +50,13 @@ export function ChatHistoryList({
 					const onRetry =
 						message.role === "error"
 							? () => {
-								for (let i = messageIndex - 1; i >= 0; i--) {
-									if (messages[i].role === "assistant") {
-										regenerateResponse(messages[i].id);
-										break;
+									for (let i = messageIndex - 1; i >= 0; i--) {
+										if (messages[i].role === "assistant") {
+											regenerateResponse(messages[i].id);
+											break;
+										}
 									}
 								}
-							}
 							: undefined;
 					return (
 						<ChatMessage

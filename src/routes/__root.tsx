@@ -1,6 +1,3 @@
-import { ModeToggle } from "@/components/mode-toggle";
-import { ThemeProvider } from "@/components/theme-provider";
-import { env } from "@/env";
 import { ClerkProvider, useAuth } from "@clerk/tanstack-react-start";
 import type { ConvexQueryClient } from "@convex-dev/react-query";
 import { TanStackDevtools } from "@tanstack/react-devtools";
@@ -16,6 +13,9 @@ import {
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import type { ConvexReactClient } from "convex/react";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
+import { ModeToggle } from "@/components/mode-toggle";
+import { ThemeProvider } from "@/components/theme-provider";
+import { env } from "@/env";
 import appCss from "../../app.css?url";
 import themeCss from "../../index.css?url";
 import baseCss from "../styles.css?url";

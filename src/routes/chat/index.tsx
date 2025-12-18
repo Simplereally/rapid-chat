@@ -1,8 +1,8 @@
-import { ChatInputForm } from "@/features/ai-chat";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation } from "convex/react";
 import { Bot } from "lucide-react";
 import { useState } from "react";
+import { ChatInputForm } from "@/features/ai-chat";
 import { api } from "../../../convex/_generated/api";
 
 export const Route = createFileRoute("/chat/")({
@@ -28,7 +28,10 @@ function NewChatPage() {
 			navigate({
 				to: "/chat/$threadId",
 				params: { threadId },
-				search: { initialInput: fullContent, initialThinking: isThinkingEnabled },
+				search: {
+					initialInput: fullContent,
+					initialThinking: isThinkingEnabled,
+				},
 			});
 		} finally {
 			setIsCreating(false);

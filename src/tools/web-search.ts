@@ -1,17 +1,21 @@
-import { z } from "zod";
 import type { Tool } from "@tanstack/ai";
-import { env } from "@/env";
 import { tavily } from "@tavily/core";
+import { z } from "zod";
+import { env } from "@/env";
 
 /**
  * Schemas for the web search tool
  */
 const webSearchInputSchema = z.object({
-	query: z.string().describe(
-		"The search query string. Be specific and concise. " +
-			"Use natural language questions or keyword phrases." +
-            "If no time period is specified, prioritize the most recent information as of " + new Date().getFullYear() + "."
-	),
+	query: z
+		.string()
+		.describe(
+			"The search query string. Be specific and concise. " +
+				"Use natural language questions or keyword phrases." +
+				"If no time period is specified, prioritize the most recent information as of " +
+				new Date().getFullYear() +
+				".",
+		),
 });
 
 const webSearchOutputSchema = z.object({
@@ -26,7 +30,7 @@ const webSearchOutputSchema = z.object({
 				url: z.string().url().describe("Source URL"),
 				content: z.string().describe("Relevant content excerpt from the page"),
 				score: z.number().describe("Relevance score (0-1)"),
-			})
+			}),
 		)
 		.describe("Ranked list of search results, ordered by relevance"),
 	query: z.string().describe("The original search query that was executed"),
@@ -38,7 +42,9 @@ type WebSearchOutput = z.infer<typeof webSearchOutputSchema>;
 /**
  * Execute a web search using the Tavily API
  */
-async function executeWebSearch({ query }: WebSearchInput): Promise<WebSearchOutput> {
+async function executeWebSearch({
+	query,
+}: WebSearchInput): Promise<WebSearchOutput> {
 	const apiKey = env.TAVILY_API_KEY;
 
 	if (!apiKey) {
@@ -81,8 +87,8 @@ export const webSearchTool: Tool<
 	name: "web_search",
 	description:
 		"Search the web for current, real-time information. " +
-        "Use this tool when you need to find up-to-date facts, news, events, or information that may be beyond your knowledge cutoff date. " +
-        "Returns relevant search results with summaries and source URLs.",
+		"Use this tool when you need to find up-to-date facts, news, events, or information that may be beyond your knowledge cutoff date. " +
+		"Returns relevant search results with summaries and source URLs.",
 	inputSchema: webSearchInputSchema,
 	outputSchema: webSearchOutputSchema,
 	execute: executeWebSearch,

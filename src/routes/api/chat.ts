@@ -1,9 +1,9 @@
-import { env } from "@/env";
-import { webSearchTool } from "@/tools";
 import { chat, toStreamResponse } from "@tanstack/ai";
 import { ollama } from "@tanstack/ai-ollama";
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
+import { env } from "@/env";
+import { webSearchTool } from "@/tools";
 
 /**
  * Available tools for the chat model.

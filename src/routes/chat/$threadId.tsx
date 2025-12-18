@@ -1,3 +1,8 @@
+import { useAuth } from "@clerk/tanstack-react-start";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "convex/react";
+import { ArrowDown, Loader2 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
 	ChatHeader,
@@ -10,11 +15,6 @@ import { useChatActions } from "@/features/ai-chat/hooks/use-chat-actions";
 import { useChatInitializationLogic } from "@/features/ai-chat/hooks/use-chat-initialization";
 import { useChatScroll } from "@/features/ai-chat/hooks/use-chat-scroll";
 import { useParsedMessages } from "@/features/ai-chat/hooks/use-parsed-messages";
-import { useAuth } from "@clerk/tanstack-react-start";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "convex/react";
-import { ArrowDown, Loader2 } from "lucide-react";
-import { useCallback, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 
@@ -37,41 +37,59 @@ export const Route = createFileRoute("/chat/$threadId")({
 function ChatThreadPage() {
 	const { threadId } = Route.useParams();
 	const navigate = useNavigate();
-	const { getToken } = useAuth();
+	const auth = useAuth();
 
 	// 1. Thread Metadata (for title)
 	const thread = useQuery(api.threads.get, {
 		threadId: threadId as Id<"threads">,
 	});
 
-	// 2. Hybrid Core State
-	const {
-		uiMessages,
-		conversationMessages,
-		isLoading,
-		stop,
-		append,
-		setMessages: setStreamingMessages,
-		isTokenLoaded,
-	} = useChat({ threadId });
+	// 2. Load existing messages from Convex
+	const convexMessages = useQuery(api.messages.list, {
+		threadId: threadId as Id<"threads">,
+	});
 
-	// 3. View Logic Extraction
-	const parsedMessages = useParsedMessages(uiMessages, isLoading);
+	// 3. TanStack AI Chat State with cross-tab sync
+	const { messages, isLoading, stop, append, setMessages, isTokenLoaded } =
+		useChat({
+			threadId,
+		});
 
-	// 4. UI Actions & State
+	// 4. View Logic Extraction
+	const parsedMessages = useParsedMessages(messages, isLoading);
+
+	// 5. Hydrate messages when navigating to a different thread
+	const lastThreadIdRef = useRef<string | null>(null);
+
+	useEffect(() => {
+		// When thread changes, load its messages from Convex
+		if (convexMessages !== undefined && threadId !== lastThreadIdRef.current) {
+			lastThreadIdRef.current = threadId;
+
+			const hydratedMessages = convexMessages.map((msg) => ({
+				id: msg._id,
+				role: msg.role as "user" | "assistant",
+				parts: [{ type: "text" as const, content: msg.content }],
+				createdAt: msg.createdAt ? new Date(msg.createdAt) : undefined,
+			}));
+			setMessages(hydratedMessages);
+		}
+	}, [convexMessages, threadId, setMessages]);
+
+	// 6. UI Actions & State
 	const { initialThinking, initialInput } = Route.useSearch();
 	const [isThinkingEnabled, setIsThinkingEnabled] = useState(
 		initialThinking ?? true,
 	);
 
-	// 5. Hooks: Actions, Scroll, Init
+	// 7. Hooks: Actions, Scroll, Init
 	const { handleSubmit, clearConversation } = useChatActions({
 		threadId,
 		isThinkingEnabled,
 		append,
-		setStreamingMessages,
+		setStreamingMessages: setMessages,
 		isLoading,
-		getToken: () => getToken({ template: "convex" }),
+		getToken: () => auth.getToken({ template: "convex" }),
 	});
 
 	const { scrollViewportRef, showScrollToBottom, pinToBottom } = useChatScroll(
@@ -82,28 +100,33 @@ function ChatThreadPage() {
 	useChatInitializationLogic({
 		threadId,
 		initialInput,
-		clearInitialInput: () =>
+		clearInitialInput: () => {
 			navigate({
 				to: ".",
 				params: { threadId },
 				search: { initialInput: undefined },
 				replace: true,
-			}),
+			});
+		},
 		append,
 		isTokenLoaded,
-		getToken: () => getToken({ template: "convex" }),
+		getToken: () => auth.getToken({ template: "convex" }),
 	});
 
-	// Quick fix for the adapter:
+	// Adapter for message actions
 	const adaptSendMessage = useCallback(
-		(content: string) => append({ role: "user", content }),
+		(content: string) => {
+			append({ role: "user", content }).catch((err) => {
+				console.error("Failed to send message:", err);
+			});
+		},
 		[append],
 	);
 
 	// Re-bind messageActions with correct methods
 	const activeMessageActions = useMessageActions({
-		messages: conversationMessages,
-		setMessages: setStreamingMessages,
+		messages,
+		setMessages,
 		sendMessage: adaptSendMessage,
 		isLoading,
 		isThinkingEnabled,
@@ -138,7 +161,7 @@ function ChatThreadPage() {
 	return (
 		<div className="flex flex-col h-[calc(100vh-3.5rem)] max-w-4xl mx-auto">
 			<ChatHeader
-				hasMessages={uiMessages.length > 0}
+				hasMessages={messages.length > 0}
 				isLoading={isLoading}
 				onClear={clearConversation}
 				title={thread?.title ?? "Chat"}

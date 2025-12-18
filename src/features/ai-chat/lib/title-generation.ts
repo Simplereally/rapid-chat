@@ -1,6 +1,6 @@
 /**
  * AI Title Generation Utility
- * 
+ *
  * Handles the fire-and-forget title generation for chat threads.
  * This runs independently of the main chat flow to not block the user experience.
  */
@@ -8,7 +8,7 @@
 /**
  * Triggers AI title generation in the background.
  * Fire-and-forget - does not block the chat flow.
- * 
+ *
  * @param threadId - The Convex thread ID to update
  * @param userMessage - The user's first message (used to generate title)
  * @param token - The Clerk auth token for authorization

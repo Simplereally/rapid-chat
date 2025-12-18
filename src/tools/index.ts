@@ -6,6 +6,5 @@
  * external systems and APIs.
  */
 
-export { webSearchTool } from "./web-search";
 export type { WebSearchInput, WebSearchOutput } from "./web-search";
-
+export { webSearchTool } from "./web-search";

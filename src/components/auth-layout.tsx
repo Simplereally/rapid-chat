@@ -1,6 +1,6 @@
-import { fadeInUp, staggerContainer } from "@/framer/motion";
 import { motion } from "framer-motion";
 import type { ReactNode } from "react";
+import { fadeInUp, staggerContainer } from "@/framer/motion";
 
 interface AuthLayoutProps {
 	children: ReactNode;
