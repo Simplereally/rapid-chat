@@ -49,7 +49,7 @@ export function ChatInputForm({
 	);
 
 	return (
-		<form onSubmit={handleSubmit} className="flex gap-2 items-end pb-2">
+		<form onSubmit={handleSubmit} className="flex gap-2 items-end p-1">
 			{/* Thinking Toggle */}
 			<Tooltip>
 				<TooltipTrigger asChild>
@@ -87,7 +87,9 @@ export function ChatInputForm({
 					placeholder={
 						isOllamaRunning ? "Ask something..." : "Ollama is not running..."
 					}
-					className="pr-10"
+					className={`pr-10 transition-colors duration-200 ${
+						isThinkingEnabled ? "border-primary ring-1 ring-primary/20" : ""
+					}`}
 					disabled={isLoading || !isOllamaRunning}
 				/>
 				{!isOllamaRunning && (

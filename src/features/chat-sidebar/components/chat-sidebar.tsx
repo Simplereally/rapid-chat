@@ -51,6 +51,8 @@ import { useMutation, useQuery } from "convex/react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
 	Check,
+	Edit,
+	Edit3Icon,
 	Loader2,
 	LogOut,
 	MessageSquare,
@@ -214,20 +216,20 @@ export function ChatSidebar() {
 	return (
 		<>
 			<Sidebar className="border-r border-border/50">
-				<SidebarHeader className="border-b border-border/50 p-4">
-					<Button
-						onClick={handleNewChat}
-						disabled={isCreating}
-						className="w-full justify-start gap-2 bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary"
-						variant="ghost"
-					>
-						{isCreating ? (
-							<Loader2 className="h-4 w-4 animate-spin" />
-						) : (
-							<MessageSquarePlus className="h-4 w-4" />
-						)}
-						New Chat
-					</Button>
+				<SidebarHeader className="max-h-14 border-b border-border/50 p-2">
+					<div className="flex justify-center items-center gap-2 h-full">
+						<span
+							className="p-2 text-primary text-2xl"
+							style={{
+								fontFamily: "'Russo One', sans-serif",
+								fontWeight: "bold",
+								fontStyle: "italic",
+								letterSpacing: "0.04em",
+							}}
+						>
+							Rapid Chat
+						</span>
+					</div>
 				</SidebarHeader>
 
 				<SidebarContent>
@@ -259,10 +261,14 @@ export function ChatSidebar() {
 						</div>
 					) : (
 						// Thread groups
-						groupedThreads.map((group) => (
-							<SidebarGroup key={group.label}>
-								<SidebarGroupLabel className="text-xs text-muted-foreground/70 px-2">
-									{group.label}
+						<div>
+							<label className="text-sm text-muted-foreground px-3">
+								Chats
+							</label>
+							{groupedThreads.map((group) => (
+								<SidebarGroup key={group.label} className="py-0">
+									<SidebarGroupLabel className="text-xs text-muted-foreground/70 px-2">
+										{group.label}
 								</SidebarGroupLabel>
 								<SidebarGroupContent>
 									<SidebarMenu>
@@ -331,7 +337,7 @@ export function ChatSidebar() {
 																		}}
 																		transition={{ duration: 0.15 }}
 																	>
-																		<X className="h-6 w-6" />
+																		<X className="h-5 w-5" />
 																	</motion.div>
 																) : (
 																	<motion.div
@@ -341,7 +347,7 @@ export function ChatSidebar() {
 																		exit={{ opacity: 0, scale: 0.5 }}
 																		transition={{ duration: 0.15 }}
 																	>
-																		<MoreHorizontal className="h-6 w-6" />
+																		<MoreHorizontal className="h-5 w-5" />
 																	</motion.div>
 																)}
 															</AnimatePresence>
@@ -375,11 +381,12 @@ export function ChatSidebar() {
 									</SidebarMenu>
 								</SidebarGroupContent>
 							</SidebarGroup>
-						))
+						))}
+					</div>
 					)}
 				</SidebarContent>
 
-				<SidebarFooter className="border-t border-border/50 p-4">
+				<SidebarFooter className="border-t border-border/50 p-2">
 					<DropdownMenu>
 						<DropdownMenuTrigger asChild>
 							<Button

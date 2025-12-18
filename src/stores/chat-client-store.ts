@@ -115,19 +115,8 @@ export const useChatClientStore = create<ChatStore>()(
 					onError,
 				} = config;
 
-				// DIAGNOSTIC: Log when request starts
-				console.log(
-					`[CHAT] startChatRequest called for thread ${threadId} at ${Date.now()}`,
-				);
-
 				// Get or initialize client state
 				let clientState = get().clients.get(threadId);
-				console.log(
-					`[CHAT] Thread ${threadId} - existing client:`,
-					!!clientState?.client,
-					"isLoading:",
-					clientState?.isLoading,
-				);
 
 				// Create ChatClient if doesn't exist
 				if (!clientState || !clientState.client) {

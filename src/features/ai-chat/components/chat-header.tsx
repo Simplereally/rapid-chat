@@ -44,10 +44,9 @@ export function ChatHeader({
 
 	return (
 		<>
-			<div className="flex items-center justify-between py-4 px-4">
+			<div className="flex items-center justify-between p-2 px-4">
 				<div className="flex items-center gap-2">
-					<Bot className="h-6 w-6 text-primary shrink-0" />
-					<h1 className="text-xl md:text-2xl font-bold truncate">{title}</h1>
+					<h1 className="font-bold truncate">{title}</h1>
 				</div>
 
 				{/* Clear conversation button with confirmation dialog */}
