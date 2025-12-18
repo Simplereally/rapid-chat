@@ -285,6 +285,7 @@ export function ChatSidebar() {
 															initialThinking: undefined,
 														}}
 														onClick={handleThreadClick}
+														preload="intent"
 														className="flex items-center gap-2 overflow-hidden min-w-0"
 													>
 														<ThreadRow

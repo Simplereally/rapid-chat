@@ -32,6 +32,10 @@ export function getRouter() {
 			scrollRestoration: true,
 			defaultPreloadStaleTime: 0,
 			defaultNotFoundComponent: NotFoundPage,
+			// Performance: Instant navigation - show new page immediately
+			defaultPendingMs: 0,
+			// Performance: Prefetch on hover/focus by default
+			defaultPreload: "intent",
 			context: {
 				queryClient,
 				convexClient: convex,

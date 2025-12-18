@@ -22,6 +22,7 @@ import type { Id } from "../../../convex/_generated/dataModel";
 
 export const Route = createFileRoute("/chat/$threadId")({
 	component: ChatThreadPage,
+	pendingComponent: ChatThreadPending,
 	validateSearch: (search: Record<string, unknown>) => {
 		return {
 			initialInput:
@@ -35,6 +36,26 @@ export const Route = createFileRoute("/chat/$threadId")({
 		};
 	},
 });
+
+// Pending skeleton shown during navigation (after pendingMs delay)
+function ChatThreadPending() {
+	return (
+		<div className="flex flex-col h-[calc(100vh-3.5rem)] max-w-4xl mx-auto">
+			{/* Header skeleton */}
+			<div className="flex items-center justify-between p-4 border-b">
+				<div className="h-5 w-32 bg-muted animate-pulse rounded" />
+			</div>
+			{/* Message area skeleton */}
+			<div className="flex-1 flex items-center justify-center">
+				<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+			</div>
+			{/* Input skeleton */}
+			<div className="shrink-0 border-t border-border bg-background px-4 pt-2 pb-4">
+				<div className="h-20 bg-muted animate-pulse rounded-lg" />
+			</div>
+		</div>
+	);
+}
 
 function ChatThreadPage() {
 	const { threadId } = Route.useParams();

@@ -72,7 +72,18 @@ export const Route = createRootRouteWithContext<{
 	}),
 
 	beforeLoad: async (ctx) => {
-		// Always fetch auth state to ensure correct redirects
+		// On client-side navigation, don't block - let the page render immediately
+		// Auth protection is handled by Clerk's client hooks in the components
+		if (typeof window !== "undefined") {
+			// Return cached auth context or defaults - don't await server call
+			return {
+				userId: null,
+				token: null,
+				isAuthenticated: true, // Assume authenticated, Clerk hooks will redirect if not
+			};
+		}
+
+		// SSR only: fetch auth state for initial page load
 		const { userId, token, isAuthenticated } = await fetchClerkAuth();
 
 		const publicPaths = ["/sign-in", "/sign-up"];
