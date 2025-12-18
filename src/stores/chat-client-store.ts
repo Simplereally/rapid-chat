@@ -295,9 +295,6 @@ export const useChatClientStore = create<ChatStore>()(
 				// Fire and forget - don't await sendMessage!
 				// ChatClient handles state updates via callbacks (onMessagesChange, onFinish, onError)
 				// Awaiting would block and prevent parallel streaming across threads
-				console.log(
-					`[CHAT] Thread ${threadId} - calling sendMessage at ${Date.now()}`,
-				);
 				client.sendMessage(content).catch((error) => {
 					// Error handling is done via onError callback above
 					// This catch is for any synchronous errors that slip through

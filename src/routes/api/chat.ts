@@ -1,28 +1,126 @@
 import { env } from "@/env";
-import { webSearchTool } from "@/tools";
+import {
+	readTool,
+	writeTool,
+	editTool,
+	multiEditTool,
+	globTool,
+	grepTool,
+	lsTool,
+	webSearchTool,
+} from "@/tools";
 import { chat, type ModelMessage, toStreamResponse } from "@tanstack/ai";
 import { ollama } from "@tanstack/ai-ollama";
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
 /**
- * Available tools for the chat model.
- * Add new tools here to make them available to the LLM.
+ * Available tools for the chat model (Claude Code aligned).
+ *
+ * Direct file IO:
+ * - read: Read files (text, images, PDFs)
+ * - write: Create or overwrite files [Requires Permission]
+ * - edit: Single find-and-replace in a file [Requires Permission]
+ * - multi_edit: Batch multiple Edit operations [Requires Permission]
+ *
+ * Search / Discovery:
+ * - glob: Find files by pattern
+ * - grep: Search file contents by regex
+ * - ls: List directory contents
  */
 const availableTools = [
-	webSearchTool,
-	// Add more tools here as needed:
-	// calculatorTool,
-	// urlReaderTool,
+	// Search / Discovery (use these FIRST to locate what you need)
+	grepTool,         // Search file contents by regex
+	globTool,         // Find files by pattern
+	lsTool,           // List directory contents
+	
+	// Direct file IO
+	readTool,         // Read files (text, images, PDFs)
+	writeTool,        // ⚠️ Create or overwrite files [Requires Permission]
+	editTool,         // ⚠️ Single find-and-replace [Requires Permission]
+	multiEditTool,    // ⚠️ Batch edits on one file [Requires Permission]
+	
+	// External tools
+	webSearchTool,    // Search the web for current information
 ];
 
 /**
  * Base system prompt that's always included.
- * Provides context about available capabilities.
+ * Provides context about available capabilities and TOOL SELECTION GUIDANCE.
+ *
+ * This is where we teach the model the most efficient way to use tools.
  */
-const BASE_SYSTEM_PROMPT = `You are a helpful assistant with tool-calling capabilities.
+const BASE_SYSTEM_PROMPT = `You are a helpful assistant with powerful tool-calling capabilities for working with files and searching for information.
 
-Use tools when you need current information or capabilities beyond your training data. After receiving tool results, integrate them naturally into your response with proper attribution. If no tool is needed, answer directly.`;
+## Available Tools (Claude Code aligned)
+
+### Search / Discovery
+- \`grep\` - Search file contents by regex. Use this FIRST to find content within files.
+- \`glob\` - Find files by pattern. Use when you know part of the filename.
+- \`ls\` - List directory contents. Use to explore directory structure.
+
+### Direct file IO
+- \`read\` - Read file contents (text, images, PDFs).
+- \`write\` - Create or overwrite files. ⚠️ Requires user approval.
+- \`edit\` - Single find-and-replace in a file. ⚠️ Requires user approval.
+- \`multi_edit\` - Batch multiple edits on one file. ⚠️ Requires user approval.
+
+### External
+- \`web_search\` - Search the web for current information.
+
+## Tool Selection Strategy
+
+Choose tools efficiently by following this decision tree:
+
+### When working with files:
+1. **Finding content WITHIN files** → Use \`grep\` first
+   - Search for function names, imports, error messages, TODOs, variable names
+   - Returns matching lines with file paths and line numbers
+   - Much faster than reading entire files
+
+2. **Finding files BY NAME** → Use \`glob\`
+   - When you know part of the filename (e.g., "find all test files", "where is package.json")
+   - Supports glob patterns: \`*.ts\`, \`test-*\`, \`**/*.tsx\`
+
+3. **Exploring directory structure** → Use \`ls\`
+   - When you need to see what's in a directory
+   - Less common than grep/glob, but useful for orientation
+
+4. **Reading file contents** → Use \`read\` AFTER locating the file
+   - Only read files you've already found via search
+   - Use \`startLine\`/\`endLine\` for large files to avoid overwhelming context
+
+5. **Making surgical edits** → Use \`edit\` or \`multi_edit\` (requires approval)
+   - \`edit\` for single find-and-replace operations
+   - \`multi_edit\` for multiple changes to the same file
+   - Both require exact match of oldText including whitespace
+
+6. **Creating/overwriting files** → Use \`write\` (requires approval)
+   - For new files or complete rewrites
+   - Prefer edit/multi_edit for modifications to existing files
+
+### When you need external information:
+- **Current events, facts, documentation** → Use \`web_search\`
+  - For anything beyond your training data
+  - Returns summarized results with source URLs
+
+## Best Practices
+
+- **Search before reading**: Use grep or glob before read
+- **Be specific**: Narrow searches with file type filters (e.g., \`*.tsx\`)
+- **Chain efficiently**: grep → read(specific file) → edit/multi_edit
+- **Prefer edit over write**: For modifications, edit is safer than full file replacement
+- **Explain your approach**: Tell the user what you're searching for and why
+
+## Handling Approvals
+
+When a tool requires approval (write, edit, multi_edit), explain clearly:
+1. What operation you're about to perform
+2. Why it's necessary
+3. What the expected outcome is
+
+Wait for user approval before the operation executes.`;
+
 
 const MessageSchema = z
 	.object({
@@ -42,11 +140,6 @@ export const Route = createFileRoute("/api/chat")({
 				try {
 					const url = new URL(request.url);
 					const threadId = url.searchParams.get("threadId");
-
-					// DIAGNOSTIC: Log when request hits server
-					console.log(
-						`[SERVER] Chat request received for thread ${threadId} at ${Date.now()}`,
-					);
 
 					if (!threadId) {
 						return new Response("Missing threadId", { status: 400 });
@@ -88,10 +181,6 @@ export const Route = createFileRoute("/api/chat")({
 						);
 
 					// Stream the chat response - no DB persistence here
-					// Client handles persistence via onFinish callback
-					console.log(
-						`[SERVER] Thread ${threadId} - creating chat stream at ${Date.now()}`,
-					);
 					const stream = chat({
 						adapter: ollama({
 							baseUrl: env.OLLAMA_BASE_URL,
@@ -99,12 +188,10 @@ export const Route = createFileRoute("/api/chat")({
 						messages: conversationMessages,
 						model: env.OLLAMA_MODEL as "llama3",
 						systemPrompts: allSystemPrompts,
-						tools: availableTools,
+						tools: availableTools
+						// agentLoopStrategy: ...
 					});
-
-					console.log(
-						`[SERVER] Thread ${threadId} - returning streaming response at ${Date.now()}`,
-					);
+					
 					return toStreamResponse(stream);
 				} catch (e) {
 					console.error(e);

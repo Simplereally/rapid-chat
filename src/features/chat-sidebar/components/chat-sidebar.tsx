@@ -53,6 +53,7 @@ import {
 	Check,
 	Edit,
 	Edit3Icon,
+	EditIcon,
 	Loader2,
 	LogOut,
 	MessageSquare,
@@ -233,6 +234,16 @@ export function ChatSidebar() {
 				</SidebarHeader>
 
 				<SidebarContent>
+					<div className="p-2">
+					<Button
+						variant="ghost"
+						className="justify-start w-full text-primary-foreground hover:text-primary hover:cursor-pointer"
+						onClick={handleNewChat}
+					>
+						<EditIcon className="h-4 w-4" />
+						New Chat
+					</Button>	
+					</div>
 					{threads === undefined ? (
 						// Loading state
 						<SidebarGroup>

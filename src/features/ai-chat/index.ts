@@ -6,10 +6,23 @@ export { ChatMessage } from "./components/chat-message";
 export { ChatMessageActions } from "./components/chat-message-actions";
 export { EditMessageForm } from "./components/edit-message-form";
 export { ThinkingSection } from "./components/thinking-section";
+export { ToolCallIndicator } from "./components/tool-call-indicator";
+export {
+	ToolApprovalDialog,
+	ToolApprovalInline,
+	getToolIcon,
+} from "./components/tool-approval-dialog";
 export { TypingIndicator } from "./components/typing-indicator";
 
 // Hooks
 export { useMessageActions } from "./hooks/use-message-actions";
+export {
+	useToolApprovals,
+	isAwaitingApproval,
+	wasApproved,
+	wasDenied,
+} from "./hooks/use-tool-approvals";
+export type { PendingApproval } from "./hooks/use-tool-approvals";
 
 // Utilities
 export {
