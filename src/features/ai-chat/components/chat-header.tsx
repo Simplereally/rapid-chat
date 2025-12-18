@@ -44,10 +44,10 @@ export function ChatHeader({
 
 	return (
 		<>
-			<div className="flex items-center justify-between mb-6">
+			<div className="flex items-center justify-between py-4 px-4">
 				<div className="flex items-center gap-2">
-					<Bot className="h-6 w-6 text-primary" />
-					<h1 className="text-2xl font-bold">{title}</h1>
+					<Bot className="h-6 w-6 text-primary shrink-0" />
+					<h1 className="text-xl md:text-2xl font-bold truncate">{title}</h1>
 				</div>
 
 				{/* Clear conversation button with confirmation dialog */}
@@ -60,9 +60,9 @@ export function ChatHeader({
 										variant="ghost"
 										size="sm"
 										disabled={isLoading}
-										className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+										className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 gap-2"
 									>
-										<Trash2 className="h-3.5 w-3.5" />
+										<Trash2 className="h-4 w-4" />
 										Clear
 									</Button>
 								</DialogTrigger>
@@ -92,7 +92,7 @@ export function ChatHeader({
 				)}
 			</div>
 
-			<Separator className="mb-4" />
+			<Separator className="mb-2" />
 		</>
 	);
 }

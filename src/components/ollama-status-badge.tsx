@@ -55,7 +55,7 @@ export function OllamaStatusBadge() {
 		running: {
 			color: "bg-emerald-500",
 			text: "Service online",
-			icon: <CheckCircle2 className="h-3 w-3" />,
+			icon: <CheckCircle2 className="h-6 w-6 text-emerald-500" />,
 			description: "Ollama is active and ready",
 		},
 		stopped: {
@@ -113,17 +113,6 @@ export function OllamaStatusBadge() {
 				</div>
 			</HoverCardTrigger>
 			<HoverCardContent align="end" className="w-80 p-4 space-y-4">
-				<div className="flex items-center justify-between">
-					<div className="space-y-1">
-						<h4 className="text-md font-bold leading-none">Ollama Dashboard</h4>
-						<p className="text-sm text-muted-foreground font-medium uppercase tracking-tight">
-							Local LLM Runtime
-						</p>
-					</div>
-				</div>
-
-				<Separator className="opacity-50" />
-
 				<div className="space-y-3">
 					<div className="flex items-start gap-3">
 						<div className={cn("mt-1 p-1.5 rounded-md", `${config.color}/10`)}>
@@ -143,14 +132,14 @@ export function OllamaStatusBadge() {
 							</p>
 						</div>
 					</div>
-
+				<Separator className="opacity-50" />
 					{status === "running" && (
 						<div className="space-y-2.5 pt-1">
 							<div className="flex items-center justify-between">
 								<Label className="text-md font-bold tracking-wider text-muted-foreground">
 									Loaded Models
 								</Label>
-								<span className="text-md font-medium bg-muted px-1.5 py-0.5 rounded">
+								<span className="text-md font-medium text-primary px-1.5 py-0.5 rounded">
 									{models.length} installed
 								</span>
 							</div>
@@ -161,9 +150,10 @@ export function OllamaStatusBadge() {
 											<Badge
 												key={m}
 												variant="secondary"
-												className="text-md font-normal px-2 py-0 border-transparent hover:border-border transition-colors"
+												className="text-md font-normal px-2 py-0 border-transparent hover:border-border transition-colors max-w-[290px]"
+												title={m}
 											>
-												{m}
+												<span className="truncate min-w-0">{m}</span>
 											</Badge>
 										))}
 										{models.length > 8 && (
@@ -274,9 +264,8 @@ export function OllamaStatusBadge() {
 
 				<div className="flex justify-between items-center pt-1">
 					<Button
-						variant="ghost"
 						size="sm"
-						className="h-7 px-2.5 text-md gap-1.5 hover:bg-muted font-medium"
+						className="h-10 px-2.5 text-md gap-1.5 hover:bg-muted font-medium w-full"
 						onClick={() => checkStatus()}
 					>
 						<RefreshCw
