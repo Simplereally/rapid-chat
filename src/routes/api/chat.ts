@@ -7,9 +7,10 @@ import {
 	globTool,
 	grepTool,
 	lsTool,
+	bashTool,
 	webSearchTool,
 } from "@/tools";
-import { chat, type ModelMessage, toStreamResponse } from "@tanstack/ai";
+import { chat, type ModelMessage, type AgentLoopStrategy, toStreamResponse } from "@tanstack/ai";
 import { ollama } from "@tanstack/ai-ollama";
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
@@ -27,6 +28,9 @@ import { z } from "zod";
  * - glob: Find files by pattern
  * - grep: Search file contents by regex
  * - ls: List directory contents
+ *
+ * Shell / Terminal:
+ * - bash: Execute shell commands [Requires Permission]
  */
 const availableTools = [
 	// Search / Discovery (use these FIRST to locate what you need)
@@ -40,6 +44,9 @@ const availableTools = [
 	editTool,         // ⚠️ Single find-and-replace [Requires Permission]
 	multiEditTool,    // ⚠️ Batch edits on one file [Requires Permission]
 	
+	// Shell / Terminal
+	bashTool,         // ⚠️ Execute shell commands [Requires Permission]
+	
 	// External tools
 	webSearchTool,    // Search the web for current information
 ];
@@ -50,7 +57,7 @@ const availableTools = [
  *
  * This is where we teach the model the most efficient way to use tools.
  */
-const BASE_SYSTEM_PROMPT = `You are a helpful assistant with powerful tool-calling capabilities for working with files and searching for information.
+const BASE_SYSTEM_PROMPT = `You are a helpful assistant, aware of all previous messages with the user and intelligently work autonomously with common sense. You have powerful tool-calling capabilities for working with files, running commands, and searching for information.
 
 ## Available Tools (Claude Code aligned)
 
@@ -64,6 +71,13 @@ const BASE_SYSTEM_PROMPT = `You are a helpful assistant with powerful tool-calli
 - \`write\` - Create or overwrite files. ⚠️ Requires user approval.
 - \`edit\` - Single find-and-replace in a file. ⚠️ Requires user approval.
 - \`multi_edit\` - Batch multiple edits on one file. ⚠️ Requires user approval.
+
+### Shell / Terminal
+- \`bash\` - Execute shell commands. ⚠️ Requires user approval.
+  - Run build commands, tests, scripts
+  - Install dependencies  
+  - Start/stop services
+  - Inspect system state
 
 ### External
 - \`web_search\` - Search the web for current information.
@@ -99,6 +113,12 @@ Choose tools efficiently by following this decision tree:
    - For new files or complete rewrites
    - Prefer edit/multi_edit for modifications to existing files
 
+### When you need to run commands:
+- **Build, test, lint** → Use \`bash\` (requires approval)
+  - Examples: \`npm run test\`, \`bun run build\`, \`cargo check\`
+  - The output is captured and returned to you
+  - Default timeout is 30 seconds
+
 ### When you need external information:
 - **Current events, facts, documentation** → Use \`web_search\`
   - For anything beyond your training data
@@ -111,10 +131,11 @@ Choose tools efficiently by following this decision tree:
 - **Chain efficiently**: grep → read(specific file) → edit/multi_edit
 - **Prefer edit over write**: For modifications, edit is safer than full file replacement
 - **Explain your approach**: Tell the user what you're searching for and why
+- **Verify changes**: After edits, consider running tests with \`bash\` to verify
 
 ## Handling Approvals
 
-When a tool requires approval (write, edit, multi_edit), explain clearly:
+When a tool requires approval (write, edit, multi_edit, bash), explain clearly:
 1. What operation you're about to perform
 2. Why it's necessary
 3. What the expected outcome is
@@ -180,6 +201,18 @@ export const Route = createFileRoute("/api/chat")({
 								m.role === "tool",
 						);
 
+					// Agent loop strategy: Continue looping when model wants to use tools
+					// Max 10 iterations for safety (prevents infinite loops)
+					const agentLoopStrategy: AgentLoopStrategy = ({ iterationCount, finishReason }) => {
+						// Stop if we've reached max iterations
+						if (iterationCount >= 10) {
+							console.warn(`Agent loop reached max iterations (${iterationCount}), stopping.`);
+							return false;
+						}
+						// Continue if the model wants to call more tools
+						return finishReason === "tool_calls";
+					};
+
 					// Stream the chat response - no DB persistence here
 					const stream = chat({
 						adapter: ollama({
@@ -188,8 +221,8 @@ export const Route = createFileRoute("/api/chat")({
 						messages: conversationMessages,
 						model: env.OLLAMA_MODEL as "llama3",
 						systemPrompts: allSystemPrompts,
-						tools: availableTools
-						// agentLoopStrategy: ...
+						tools: availableTools,
+						agentLoopStrategy,
 					});
 					
 					return toStreamResponse(stream);

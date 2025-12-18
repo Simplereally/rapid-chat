@@ -9,6 +9,7 @@ import { ChatMessageActions } from "./chat-message-actions";
 import { EditMessageForm } from "./edit-message-form";
 import { ThinkingSection } from "./thinking-section";
 import { ToolCallIndicator } from "./tool-call-indicator";
+import { TerminalOutput } from "./terminal-output";
 
 interface ChatMessageProps {
 	message: ParsedMessage;
@@ -225,25 +226,76 @@ export function ChatMessage({
 										);
 									}
 									if (part.type === "tool-call") {
-										// Only show indicator while tool is executing (no output yet)
 										const toolPart = part as {
 											id: string;
 											name: string;
 											arguments: string;
 											output?: unknown;
+											state?: string;
 										};
-										if (toolPart.output === undefined) {
-											let parsedArgs: Record<string, unknown> = {};
-											try {
-												parsedArgs = JSON.parse(toolPart.arguments || "{}");
-											} catch {
-												// Invalid JSON, use empty object
+										
+										let parsedArgs: Record<string, unknown> = {};
+										try {
+											parsedArgs = JSON.parse(toolPart.arguments || "{}");
+										} catch {
+											// Invalid JSON, use empty object
+										}
+										
+										// Special handling for bash - always show terminal output
+										if (toolPart.name === "bash") {
+											const command = typeof parsedArgs.command === "string" ? parsedArgs.command : "";
+											const isApprovalRequired = toolPart.state === "approval-requested";
+											const isExecuting = toolPart.output === undefined && !isApprovalRequired;
+											
+											// Parse output if available
+											let parsedOutput: {
+												success: boolean;
+												exitCode: number | null;
+												stdout: string;
+												stderr: string;
+												timedOut: boolean;
+												executionTime: number;
+											} | undefined;
+											
+											if (toolPart.output !== undefined) {
+												try {
+													if (typeof toolPart.output === "string") {
+														parsedOutput = JSON.parse(toolPart.output);
+													} else {
+														parsedOutput = toolPart.output as typeof parsedOutput;
+													}
+												} catch {
+													// Fallback if output is just a string
+													parsedOutput = {
+														success: true,
+														exitCode: 0,
+														stdout: String(toolPart.output),
+														stderr: "",
+														timedOut: false,
+														executionTime: 0,
+													};
+												}
 											}
+											
+											return (
+												<TerminalOutput
+													key={`${message.id}-bash-${toolPart.id}`}
+													command={command}
+													output={parsedOutput}
+													isExecuting={isExecuting}
+													isApprovalRequired={isApprovalRequired}
+												/>
+											);
+										}
+										
+										// For other tools, only show indicator while executing (no output yet)
+										if (toolPart.output === undefined) {
 											return (
 												<ToolCallIndicator
 													key={`${message.id}-tool-${toolPart.id}`}
 													toolName={toolPart.name}
 													args={parsedArgs}
+													state={toolPart.state}
 												/>
 											);
 										}

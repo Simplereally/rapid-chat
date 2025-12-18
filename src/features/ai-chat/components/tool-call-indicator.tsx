@@ -1,7 +1,20 @@
-import { FileText, FolderOpen, FolderSearch, Globe, Loader2, AlertTriangle, Search } from "lucide-react";
+import { 
+	FileText, 
+	FolderOpen, 
+	FolderSearch, 
+	Globe, 
+	Loader2, 
+	AlertTriangle, 
+	Search,
+	Terminal,
+	List,
+	Edit,
+	Edit2
+} from "lucide-react";
+import type { ToolName } from "@/tools";
 
 interface ToolCallIndicatorProps {
-	toolName: string;
+	toolName: ToolName;
 	args: Record<string, unknown>;
 	state?: string; // Tool call state for approval handling
 }
@@ -30,20 +43,36 @@ export function ToolCallIndicator({ toolName, args, state }: ToolCallIndicatorPr
 }
 
 /**
- * Get the appropriate icon for a tool
+ * Get the appropriate icon for a tool (Claude Code aligned names)
  */
-function getToolIcon(toolName: string) {
+function getToolIcon(toolName: ToolName) {
 	switch (toolName) {
+		// Search / Discovery
+		case "grep":
+			return Search;
+		case "glob":
+			return FolderSearch;
+		case "ls":
+			return List;
+		
+		// Direct file IO
+		case "read":
+			return FileText;
+		case "write":
+			return FolderOpen;
+		case "edit":
+			return Edit;
+		case "multi_edit":
+			return Edit2;
+		
+		// Shell / Terminal
+		case "bash":
+			return Terminal;
+		
+		// External
 		case "web_search":
 			return Globe;
-		case "grep_search":
-			return Search;
-		case "find_files":
-			return FolderSearch;
-		case "file_read":
-			return FileText;
-		case "file_write":
-			return FolderOpen;
+		
 		default:
 			return null;
 	}
@@ -51,9 +80,10 @@ function getToolIcon(toolName: string) {
 
 /**
  * Get human-readable display text for a tool call.
+ * Supports both new Claude Code aligned names and legacy names.
  */
 function getToolDisplayText(
-	toolName: string,
+	toolName: ToolName,
 	args: Record<string, unknown>,
 	state?: string,
 ): string {
@@ -63,9 +93,77 @@ function getToolDisplayText(
 	}
 
 	switch (toolName) {
-		case "generating":
-			return "Generating...";
+		// ===================
+		// Search / Discovery
+		// ===================
+		
+		case "grep": {
+			const pattern = typeof args.pattern === "string" ? args.pattern : "";
+			const path = typeof args.path === "string" ? args.path : ".";
+			const shortPattern = pattern.length > 30 ? pattern.slice(0, 27) + "..." : pattern;
+			const shortPath = path.length > 20 ? "..." + path.slice(-17) : path;
+			return pattern
+				? `Searching for "${shortPattern}" in ${shortPath}`
+				: "Searching files...";
+		}
+		
+		case "glob": {
+			const pattern = typeof args.pattern === "string" ? args.pattern : "*";
+			const path = typeof args.path === "string" ? args.path : ".";
+			const shortPath = path.length > 20 ? "..." + path.slice(-17) : path;
+			return `Finding "${pattern}" in ${shortPath}`;
+		}
+		
+		case "ls": {
+			const path = typeof args.path === "string" ? args.path : ".";
+			const shortPath = path.length > 40 ? "..." + path.slice(-37) : path;
+			return `Listing directory: ${shortPath}`;
+		}
 
+		// ===================
+		// Direct file IO
+		// ===================
+		
+		case "read": {
+			const path = typeof args.path === "string" ? args.path : "";
+			const shortPath = path.length > 40 ? "..." + path.slice(-37) : path;
+			return `Reading: ${shortPath}`;
+		}
+		
+		case "write": {
+			const path = typeof args.path === "string" ? args.path : "";
+			const shortPath = path.length > 40 ? "..." + path.slice(-37) : path;
+			return `Writing: ${shortPath}`;
+		}
+		
+		case "edit": {
+			const path = typeof args.path === "string" ? args.path : "";
+			const shortPath = path.length > 40 ? "..." + path.slice(-37) : path;
+			return `Editing: ${shortPath}`;
+		}
+		
+		case "multi_edit": {
+			const path = typeof args.path === "string" ? args.path : "";
+			const shortPath = path.length > 40 ? "..." + path.slice(-37) : path;
+			return `Batch editing: ${shortPath}`;
+		}
+
+		// ===================
+		// Shell / Terminal
+		// ===================
+		
+		case "bash": {
+			const command = typeof args.command === "string" ? args.command : "";
+			const shortCommand = command.length > 50 ? command.slice(0, 47) + "..." : command;
+			return command
+				? `Running: ${shortCommand}`
+				: "Running command...";
+		}
+
+		// ===================
+		// External
+		// ===================
+		
 		case "web_search": {
 			const query = typeof args.query === "string" ? args.query : "";
 			return query
@@ -73,67 +171,10 @@ function getToolDisplayText(
 				: "Searching the web...";
 		}
 
-		case "grep_search": {
-			const query = typeof args.query === "string" ? args.query : "";
-			const searchPath = typeof args.searchPath === "string" ? args.searchPath : ".";
-			const shortQuery = query.length > 30 ? query.slice(0, 27) + "..." : query;
-			const shortPath = searchPath.length > 20 ? "..." + searchPath.slice(-17) : searchPath;
-			return query
-				? `Searching for "${shortQuery}" in ${shortPath}`
-				: "Searching files...";
-		}
-
-		case "find_files": {
-			const pattern = typeof args.pattern === "string" ? args.pattern : "*";
-			const searchPath = typeof args.searchPath === "string" ? args.searchPath : ".";
-			const shortPath = searchPath.length > 20 ? "..." + searchPath.slice(-17) : searchPath;
-			return `Finding "${pattern}" in ${shortPath}`;
-		}
-
-		case "file_read": {
-			const operation = typeof args.operation === "string" ? args.operation : "read";
-			const path = typeof args.path === "string" ? args.path : "";
-			const shortPath = path.length > 40 ? "..." + path.slice(-37) : path;
-
-			switch (operation) {
-				case "read_file":
-					return `Reading file: ${shortPath}`;
-				case "list_directory":
-					return `Listing directory: ${shortPath}`;
-				case "check_exists":
-					return `Checking if exists: ${shortPath}`;
-				case "get_info":
-					return `Getting info for: ${shortPath}`;
-				default:
-					return `Reading: ${shortPath}`;
-			}
-		}
-
-		case "file_write": {
-			const operation = typeof args.operation === "string" ? args.operation : "write";
-			const path = typeof args.path === "string" ? args.path : "";
-			const shortPath = path.length > 40 ? "..." + path.slice(-37) : path;
-
-			switch (operation) {
-				case "write_file":
-					return `Writing file: ${shortPath}`;
-				case "append_file":
-					return `Appending to: ${shortPath}`;
-				case "create_directory":
-					return `Creating directory: ${shortPath}`;
-				case "delete":
-					return `Deleting: ${shortPath}`;
-				case "move":
-					return `Moving: ${shortPath}`;
-				case "copy":
-					return `Copying: ${shortPath}`;
-				default:
-					return `Writing: ${shortPath}`;
-			}
-		}
-
 		default:
-			return `Running ${toolName}...`;
+			// Exhaustive check - TypeScript will error if we miss a tool
+			const _exhaustiveCheck: never = toolName;
+			return `Running ${_exhaustiveCheck}...`;
 	}
 }
 
@@ -141,16 +182,30 @@ function getToolDisplayText(
  * Get approval request text for dangerous operations
  */
 function getApprovalRequestText(
-	toolName: string,
+	toolName: ToolName,
 	args: Record<string, unknown>,
 ): string {
-	if (toolName === "file_write") {
-		const operation = typeof args.operation === "string" ? args.operation : "modify";
-		const path = typeof args.path === "string" ? args.path : "file";
-		const shortPath = path.length > 30 ? "..." + path.slice(-27) : path;
-
-		return `⚠️ Approval needed: ${operation} "${shortPath}"`;
+	switch (toolName) {
+		case "bash": {
+			const command = typeof args.command === "string" ? args.command : "command";
+			const shortCommand = command.length > 40 ? command.slice(0, 37) + "..." : command;
+			return `⚠️ Approval needed: run "${shortCommand}"`;
+		}
+		
+		case "write": {
+			const path = typeof args.path === "string" ? args.path : "file";
+			const shortPath = path.length > 30 ? "..." + path.slice(-27) : path;
+			return `⚠️ Approval needed: write "${shortPath}"`;
+		}
+		
+		case "edit":
+		case "multi_edit": {
+			const path = typeof args.path === "string" ? args.path : "file";
+			const shortPath = path.length > 30 ? "..." + path.slice(-27) : path;
+			return `⚠️ Approval needed: edit "${shortPath}"`;
+		}
+		
+		default:
+			return `⚠️ Approval needed for ${toolName}`;
 	}
-
-	return `⚠️ Approval needed for ${toolName}`;
 }

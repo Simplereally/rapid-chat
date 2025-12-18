@@ -17,6 +17,9 @@
  * - grep: Search file contents by regex
  * - ls: List directory contents
  *
+ * Shell / Terminal:
+ * - bash: Execute shell commands [Requires Permission]
+ *
  * External:
  * - web_search: Search the web for information
  *
@@ -69,6 +72,15 @@ export type { LsInput, LsOutput } from "./ls";
 export { lsInputSchema, lsOutputSchema } from "./ls";
 
 // =============================================================================
+// SHELL / TERMINAL
+// =============================================================================
+
+// Bash - Execute shell commands [Requires Permission]
+export { bashTool } from "./bash";
+export type { BashInput, BashOutput } from "./bash";
+export { bashInputSchema, bashOutputSchema } from "./bash";
+
+// =============================================================================
 // EXTERNAL
 // =============================================================================
 
@@ -93,6 +105,7 @@ import { multiEditTool } from "./multi-edit";
 import { globTool } from "./glob";
 import { grepTool } from "./grep";
 import { lsTool } from "./ls";
+import { bashTool } from "./bash";
 import { webSearchTool } from "./web-search";
 
 /**
@@ -124,10 +137,18 @@ export const fileIOToolsArray = [
 ] as const;
 
 /**
- * All tools including web search
+ * Shell/Terminal tools
+ */
+export const shellTools = {
+	bash: bashTool,
+} as const;
+
+/**
+ * All tools including web search and shell
  */
 export const allTools = {
 	...fileIOTools,
+	...shellTools,
 	webSearch: webSearchTool,
 } as const;
 
@@ -136,8 +157,14 @@ export const allTools = {
  */
 export const allToolsArray = [
 	...fileIOToolsArray,
+	bashTool,
 	webSearchTool,
 ] as const;
+
+/**
+ * Type-safe union of all available tool names
+ */
+export type ToolName = (typeof allToolsArray)[number]["name"];
 
 /**
  * Safe tools that don't require user approval (read-only operations)
@@ -151,26 +178,11 @@ export const safeTools = [
 ] as const;
 
 /**
- * Dangerous tools that require user approval (write operations)
+ * Dangerous tools that require user approval (write/execute operations)
  */
 export const dangerousTools = [
 	writeTool,
 	editTool,
 	multiEditTool,
+	bashTool,
 ] as const;
-
-// =============================================================================
-// LEGACY EXPORTS (for backward compatibility - will be removed)
-// =============================================================================
-
-// @deprecated - use readTool instead
-export { readTool as fileReadTool } from "./read";
-
-// @deprecated - use writeTool instead
-export { writeTool as fileWriteTool } from "./write";
-
-// @deprecated - use grepTool instead
-export { grepTool as grepSearchTool } from "./grep";
-
-// @deprecated - use globTool instead
-export { globTool as findFilesTool } from "./glob";
