@@ -1,16 +1,21 @@
 import { env } from "@/env";
 import {
-	readTool,
-	writeTool,
+	bashTool,
 	editTool,
-	multiEditTool,
 	globTool,
 	grepTool,
 	lsTool,
-	bashTool,
+	multiEditTool,
+	readTool,
 	webSearchTool,
+	writeTool,
 } from "@/tools";
-import { chat, type ModelMessage, type AgentLoopStrategy, toStreamResponse } from "@tanstack/ai";
+import {
+	type AgentLoopStrategy,
+	chat,
+	type ModelMessage,
+	toStreamResponse,
+} from "@tanstack/ai";
 import { ollama } from "@tanstack/ai-ollama";
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
@@ -34,21 +39,21 @@ import { z } from "zod";
  */
 const availableTools = [
 	// Search / Discovery (use these FIRST to locate what you need)
-	grepTool,         // Search file contents by regex
-	globTool,         // Find files by pattern
-	lsTool,           // List directory contents
-	
+	grepTool, // Search file contents by regex
+	globTool, // Find files by pattern
+	lsTool, // List directory contents
+
 	// Direct file IO
-	readTool,         // Read files (text, images, PDFs)
-	writeTool,        // ⚠️ Create or overwrite files [Requires Permission]
-	editTool,         // ⚠️ Single find-and-replace [Requires Permission]
-	multiEditTool,    // ⚠️ Batch edits on one file [Requires Permission]
-	
+	readTool, // Read files (text, images, PDFs)
+	writeTool, // ⚠️ Create or overwrite files [Requires Permission]
+	editTool, // ⚠️ Single find-and-replace [Requires Permission]
+	multiEditTool, // ⚠️ Batch edits on one file [Requires Permission]
+
 	// Shell / Terminal
-	bashTool,         // ⚠️ Execute shell commands [Requires Permission]
-	
+	bashTool, // ⚠️ Execute shell commands [Requires Permission]
+
 	// External tools
-	webSearchTool,    // Search the web for current information
+	webSearchTool, // Search the web for current information
 ];
 
 /**
@@ -57,98 +62,40 @@ const availableTools = [
  *
  * This is where we teach the model the most efficient way to use tools.
  */
-const BASE_SYSTEM_PROMPT = `You are a helpful assistant, aware of all previous messages with the user and intelligently work autonomously with common sense. You have powerful tool-calling capabilities for working with files, running commands, and searching for information.
+const BASE_SYSTEM_PROMPT = `You are an agentic reasoning assistant with advanced tool-calling capabilities for files, commands, and information retrieval. You follow instructions and tend to not second guess yourself.
 
-## Available Tools (Claude Code aligned)
+## Tools
+**Search/Discovery**: \`grep\` (search file contents), \`glob\` (find files by pattern), \`ls\` (list directories)
+**File I/O**: \`read\`, \`write\` ⚠️, \`edit\` ⚠️, \`multi_edit\` ⚠️
+**Shell**: \`bash\` ⚠️ (execute commands, run tests, install deps, manage services)
+**External**: \`web_search\` (current info beyond training data)
 
-### Search / Discovery
-- \`grep\` - Search file contents by regex. Use this FIRST to find content within files.
-- \`glob\` - Find files by pattern. Use when you know part of the filename.
-- \`ls\` - List directory contents. Use to explore directory structure.
+## Tool Selection
+**Finding content** → grep first, then read specific files
+**Finding files** → glob for names, ls for structure
+**Modifying files** → edit/multi_edit for changes, write for new files
+**Running tasks** → bash for build/test/lint
+**Current info** → web_search
 
-### Direct file IO
-- \`read\` - Read file contents (text, images, PDFs).
-- \`write\` - Create or overwrite files. ⚠️ Requires user approval.
-- \`edit\` - Single find-and-replace in a file. ⚠️ Requires user approval.
-- \`multi_edit\` - Batch multiple edits on one file. ⚠️ Requires user approval.
+## Execution Model
+**Simple/obvious requests**: Execute immediately with sensible defaults. Don't deliberate on trivial choices (quote types, default timeouts, standard commands).
+**Complex/ambiguous tasks**: Reason about approach, then act efficiently.
+**Chain operations**: grep → read → edit. Search before reading.
 
-### Shell / Terminal
-- \`bash\` - Execute shell commands. ⚠️ Requires user approval.
-  - Run build commands, tests, scripts
-  - Install dependencies  
-  - Start/stop services
-  - Inspect system state
+## Guidelines
+- Use defaults for all tool calls, unless specified (timeout: 30000ms, cwd: current dir)
+- edit > write for modifications (exact whitespace match required)
+- ⚠️ = requires approval: state operation + reason briefly
+- Prefer action over deliberation for straightforward tasks
 
-### External
-- \`web_search\` - Search the web for current information.
-
-## Tool Selection Strategy
-
-Choose tools efficiently by following this decision tree:
-
-### When working with files:
-1. **Finding content WITHIN files** → Use \`grep\` first
-   - Search for function names, imports, error messages, TODOs, variable names
-   - Returns matching lines with file paths and line numbers
-   - Much faster than reading entire files
-
-2. **Finding files BY NAME** → Use \`glob\`
-   - When you know part of the filename (e.g., "find all test files", "where is package.json")
-   - Supports glob patterns: \`*.ts\`, \`test-*\`, \`**/*.tsx\`
-
-3. **Exploring directory structure** → Use \`ls\`
-   - When you need to see what's in a directory
-   - Less common than grep/glob, but useful for orientation
-
-4. **Reading file contents** → Use \`read\` AFTER locating the file
-   - Only read files you've already found via search
-   - Use \`startLine\`/\`endLine\` for large files to avoid overwhelming context
-
-5. **Making surgical edits** → Use \`edit\` or \`multi_edit\` (requires approval)
-   - \`edit\` for single find-and-replace operations
-   - \`multi_edit\` for multiple changes to the same file
-   - Both require exact match of oldText including whitespace
-
-6. **Creating/overwriting files** → Use \`write\` (requires approval)
-   - For new files or complete rewrites
-   - Prefer edit/multi_edit for modifications to existing files
-
-### When you need to run commands:
-- **Build, test, lint** → Use \`bash\` (requires approval)
-  - Examples: \`npm run test\`, \`bun run build\`, \`cargo check\`
-  - The output is captured and returned to you
-  - Default timeout is 30 seconds
-
-### When you need external information:
-- **Current events, facts, documentation** → Use \`web_search\`
-  - For anything beyond your training data
-  - Returns summarized results with source URLs
-
-## Best Practices
-
-- **Search before reading**: Use grep or glob before read
-- **Be specific**: Narrow searches with file type filters (e.g., \`*.tsx\`)
-- **Chain efficiently**: grep → read(specific file) → edit/multi_edit
-- **Prefer edit over write**: For modifications, edit is safer than full file replacement
-- **Explain your approach**: Tell the user what you're searching for and why
-- **Verify changes**: After edits, consider running tests with \`bash\` to verify
-
-## Handling Approvals
-
-When a tool requires approval (write, edit, multi_edit, bash), explain clearly:
-1. What operation you're about to perform
-2. Why it's necessary
-3. What the expected outcome is
-
-Wait for user approval before the operation executes.`;
-
+Reason deeply when needed. Act decisively when obvious.`;
 
 const MessageSchema = z
 	.object({
 		role: z.enum(["system", "user", "assistant", "tool"]),
-		content: z.string(),
+		content: z.string().nullable().optional(),
 	})
-	.strict(); // Allow additional fields like toolCalls, toolCallId without validation
+	.passthrough(); // Allow additional fields like toolCalls, toolCallId without validation
 
 const ChatRequestSchema = z.object({
 	messages: z.array(MessageSchema),
@@ -182,31 +129,35 @@ export const Route = createFileRoute("/api/chat")({
 
 					// Separate system messages for systemPrompts and filter conversation messages
 					const clientSystemPrompts = incomingMessages
-						.filter((m) => m.role === "system")
+						.filter(
+							(m): m is { role: "system"; content: string } =>
+								m.role === "system" && typeof m.content === "string",
+						)
 						.map((m) => m.content);
 
 					// Combine base system prompt with any client-provided prompts
 					const allSystemPrompts = [BASE_SYSTEM_PROMPT, ...clientSystemPrompts];
 
-					const conversationMessages: Array<ModelMessage<string | null>> =
-						incomingMessages.filter(
-							(
-								m,
-							): m is {
-								role: "user" | "assistant" | "tool";
-								content: string;
-							} =>
+					const conversationMessages = incomingMessages
+						.filter(
+							(m) =>
 								m.role === "user" ||
 								m.role === "assistant" ||
 								m.role === "tool",
-						);
+						)
+						.map((m) => m as unknown as ModelMessage<string | null>);
 
 					// Agent loop strategy: Continue looping when model wants to use tools
 					// Max 10 iterations for safety (prevents infinite loops)
-					const agentLoopStrategy: AgentLoopStrategy = ({ iterationCount, finishReason }) => {
+					const agentLoopStrategy: AgentLoopStrategy = ({
+						iterationCount,
+						finishReason,
+					}) => {
 						// Stop if we've reached max iterations
 						if (iterationCount >= 10) {
-							console.warn(`Agent loop reached max iterations (${iterationCount}), stopping.`);
+							console.warn(
+								`Agent loop reached max iterations (${iterationCount}), stopping.`,
+							);
 							return false;
 						}
 						// Continue if the model wants to call more tools
@@ -214,7 +165,7 @@ export const Route = createFileRoute("/api/chat")({
 					};
 
 					// Stream the chat response - no DB persistence here
-					const stream = chat({
+					const rawStream = chat({
 						adapter: ollama({
 							baseUrl: env.OLLAMA_BASE_URL,
 						}),
@@ -224,8 +175,35 @@ export const Route = createFileRoute("/api/chat")({
 						tools: availableTools,
 						agentLoopStrategy,
 					});
-					
-					return toStreamResponse(stream);
+
+					// Debug: Log stream chunks
+					async function* debugStream(
+						source: AsyncIterable<import("@tanstack/ai").StreamChunk>,
+					) {
+						let chunkCount = 0;
+						console.log(`[Chat Debug] Starting stream for thread: ${threadId}`);
+						console.log(
+							`[Chat Debug] Message count: ${conversationMessages.length}`,
+						);
+						try {
+							for await (const chunk of source) {
+								chunkCount++;
+								console.log(
+									`[Chat Debug] Chunk #${chunkCount}:`,
+									JSON.stringify(chunk),
+								);
+								yield chunk;
+							}
+							console.log(
+								`[Chat Debug] Stream completed. Total chunks: ${chunkCount}`,
+							);
+						} catch (error) {
+							console.error(`[Chat Debug] Stream error:`, error);
+							throw error;
+						}
+					}
+
+					return toStreamResponse(debugStream(rawStream));
 				} catch (e) {
 					console.error(e);
 					return new Response("Internal Error", { status: 500 });

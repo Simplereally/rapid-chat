@@ -7,9 +7,9 @@ import { stripThinkPrefix } from "../lib/chat-utils";
 import type { ParsedMessage, ParsedTextPart } from "../types";
 import { ChatMessageActions } from "./chat-message-actions";
 import { EditMessageForm } from "./edit-message-form";
+import { TerminalOutput } from "./terminal-output";
 import { ThinkingSection } from "./thinking-section";
 import { ToolCallIndicator } from "./tool-call-indicator";
-import { TerminalOutput } from "./terminal-output";
 
 interface ChatMessageProps {
 	message: ParsedMessage;
@@ -26,6 +26,9 @@ interface ChatMessageProps {
 	onEditSubmit: () => void;
 	onEditCancel: () => void;
 	hasActiveEdit: boolean;
+	// Tool approval callbacks
+	onApproveToolCall?: (approvalId: string) => void;
+	onDenyToolCall?: (approvalId: string) => void;
 }
 
 function getTextContent(parts: ParsedMessage["parsedParts"]): string {
@@ -96,6 +99,8 @@ export function ChatMessage({
 	onEditSubmit,
 	onEditCancel,
 	hasActiveEdit,
+	onApproveToolCall,
+	onDenyToolCall,
 }: ChatMessageProps) {
 	const isUserMessage = message.role === "user";
 	const isAssistant = message.role === "assistant";
@@ -217,11 +222,22 @@ export function ChatMessage({
 									}
 									if (part.type === "thinking") {
 										// Handle native thinking parts from TanStack AI
+										// Consider "actively thinking" if streaming and no main text content yet
+										const hasMainTextContent = message.parsedParts.some((p) => {
+											if (p.type === "text") {
+												const textPart = p as ParsedTextPart;
+												return (textPart.parsedContent ?? "").trim().length > 0;
+											}
+											return false;
+										});
+										const isActivelyThinking =
+											message.isStreamingAssistant && !hasMainTextContent;
+
 										return (
 											<ThinkingSection
 												key={`${message.id}-thinking`}
 												content={part.content}
-												isThinking={false}
+												isThinking={isActivelyThinking}
 											/>
 										);
 									}
@@ -232,37 +248,51 @@ export function ChatMessage({
 											arguments: string;
 											output?: unknown;
 											state?: string;
+											approval?: {
+												id: string;
+												needsApproval: boolean;
+												approved?: boolean;
+											};
 										};
-										
+
 										let parsedArgs: Record<string, unknown> = {};
 										try {
 											parsedArgs = JSON.parse(toolPart.arguments || "{}");
 										} catch {
 											// Invalid JSON, use empty object
 										}
-										
+
 										// Special handling for bash - always show terminal output
 										if (toolPart.name === "bash") {
-											const command = typeof parsedArgs.command === "string" ? parsedArgs.command : "";
-											const isApprovalRequired = toolPart.state === "approval-requested";
-											const isExecuting = toolPart.output === undefined && !isApprovalRequired;
-											
+											const command =
+												typeof parsedArgs.command === "string"
+													? parsedArgs.command
+													: "";
+											const isApprovalRequired =
+												toolPart.state === "approval-requested";
+											const isExecuting =
+												toolPart.output === undefined && !isApprovalRequired;
+											const approvalId = toolPart.approval?.id;
+
 											// Parse output if available
-											let parsedOutput: {
-												success: boolean;
-												exitCode: number | null;
-												stdout: string;
-												stderr: string;
-												timedOut: boolean;
-												executionTime: number;
-											} | undefined;
-											
+											let parsedOutput:
+												| {
+														success: boolean;
+														exitCode: number | null;
+														stdout: string;
+														stderr: string;
+														timedOut: boolean;
+														executionTime: number;
+												  }
+												| undefined;
+
 											if (toolPart.output !== undefined) {
 												try {
 													if (typeof toolPart.output === "string") {
 														parsedOutput = JSON.parse(toolPart.output);
 													} else {
-														parsedOutput = toolPart.output as typeof parsedOutput;
+														parsedOutput =
+															toolPart.output as typeof parsedOutput;
 													}
 												} catch {
 													// Fallback if output is just a string
@@ -276,7 +306,7 @@ export function ChatMessage({
 													};
 												}
 											}
-											
+
 											return (
 												<TerminalOutput
 													key={`${message.id}-bash-${toolPart.id}`}
@@ -284,23 +314,30 @@ export function ChatMessage({
 													output={parsedOutput}
 													isExecuting={isExecuting}
 													isApprovalRequired={isApprovalRequired}
+													onApprove={
+														approvalId && onApproveToolCall
+															? () => onApproveToolCall(approvalId)
+															: undefined
+													}
+													onDeny={
+														approvalId && onDenyToolCall
+															? () => onDenyToolCall(approvalId)
+															: undefined
+													}
 												/>
 											);
 										}
-										
-										// For other tools, only show indicator while executing (no output yet)
-										if (toolPart.output === undefined) {
-											return (
-												<ToolCallIndicator
-													key={`${message.id}-tool-${toolPart.id}`}
-													toolName={toolPart.name}
-													args={parsedArgs}
-													state={toolPart.state}
-												/>
-											);
-										}
-										// Tool completed - don't render anything (indicator disappears)
-										return null;
+
+										// For other tools, always show indicator
+										return (
+											<ToolCallIndicator
+												key={`${message.id}-tool-${toolPart.id}`}
+												toolName={toolPart.name as any}
+												args={parsedArgs}
+												state={toolPart.state}
+												output={toolPart.output}
+											/>
+										);
 									}
 									return null;
 								})}

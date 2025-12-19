@@ -14,6 +14,8 @@ interface UseChatReturn {
 		message: { role: "user"; content: string } | UIMessage,
 	) => Promise<void>;
 	isTokenLoaded: boolean;
+	/** Respond to a tool approval request */
+	addToolApprovalResponse: (response: { id: string; approved: boolean }) => Promise<void>;
 }
 
 /**
@@ -75,10 +77,20 @@ export function useChat({ threadId }: UseChatProps): UseChatReturn {
 		[threadId, auth],
 	);
 
+	// Tool approval response - delegates to store
+	const addToolApprovalResponse = useCallback(
+		async (response: { id: string; approved: boolean }) => {
+			await useChatClientStore.getState().addToolApprovalResponse(threadId, response);
+		},
+		[threadId],
+	);
+
 	return {
 		isLoading,
 		stop,
 		append,
 		isTokenLoaded,
+		addToolApprovalResponse,
 	};
 }
+

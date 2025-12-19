@@ -7,12 +7,12 @@ import type { ConvexQueryClient } from "@convex-dev/react-query";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
-	createRootRouteWithContext,
-	HeadContent,
-	Outlet,
-	redirect,
-	Scripts,
-	useRouteContext,
+    createRootRouteWithContext,
+    HeadContent,
+    Outlet,
+    redirect,
+    Scripts,
+    useRouteContext,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import type { ConvexReactClient } from "convex/react";
@@ -22,7 +22,7 @@ import appCss from "../../app.css?url";
 import themeCss from "../../index.css?url";
 import baseCss from "../styles.css?url";
 
-import { fetchClerkAuth } from "./__root.server";
+import { fetchClerkAuth } from "@/server/auth";
 
 export const Route = createRootRouteWithContext<{
 	queryClient: QueryClient;

@@ -1,5 +1,24 @@
 "use client";
 
+import { useClerk, useUser } from "@clerk/tanstack-react-start";
+import { Link, useNavigate, useParams } from "@tanstack/react-router";
+import { useMutation, useQuery } from "convex/react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+	Check,
+	Edit,
+	Edit3Icon,
+	EditIcon,
+	Loader2,
+	LogOut,
+	MessageSquare,
+	MessageSquarePlus,
+	MoreHorizontal,
+	Pencil,
+	Trash2,
+	X,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -45,25 +64,6 @@ import {
 	useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
-import { useClerk, useUser } from "@clerk/tanstack-react-start";
-import { Link, useNavigate, useParams } from "@tanstack/react-router";
-import { useMutation, useQuery } from "convex/react";
-import { AnimatePresence, motion } from "framer-motion";
-import {
-	Check,
-	Edit,
-	Edit3Icon,
-	EditIcon,
-	Loader2,
-	LogOut,
-	MessageSquare,
-	MessageSquarePlus,
-	MoreHorizontal,
-	Pencil,
-	Trash2,
-	X,
-} from "lucide-react";
-import { useEffect, useState } from "react";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import {
@@ -235,14 +235,14 @@ export function ChatSidebar() {
 
 				<SidebarContent>
 					<div className="p-2">
-					<Button
-						variant="ghost"
-						className="justify-start w-full text-primary-foreground hover:text-primary hover:cursor-pointer"
-						onClick={handleNewChat}
-					>
-						<EditIcon className="h-4 w-4" />
-						New Chat
-					</Button>	
+						<Button
+							variant="ghost"
+							className="justify-start w-full text-primary-foreground hover:text-primary hover:cursor-pointer"
+							onClick={handleNewChat}
+						>
+							<EditIcon className="h-4 w-4" />
+							New Chat
+						</Button>
 					</div>
 					{threads === undefined ? (
 						// Loading state
@@ -280,120 +280,122 @@ export function ChatSidebar() {
 								<SidebarGroup key={group.label} className="py-0">
 									<SidebarGroupLabel className="text-xs text-muted-foreground/70 px-2">
 										{group.label}
-								</SidebarGroupLabel>
-								<SidebarGroupContent>
-									<SidebarMenu>
-										{group.threads.map((thread) => (
-											<SidebarMenuItem key={thread._id}>
-												<SidebarMenuButton
-													asChild
-													isActive={currentThreadId === thread._id}
-													className={cn(
-														"transition-colors pr-8",
-														currentThreadId === thread._id &&
-															"bg-accent text-accent-foreground",
-													)}
-												>
-													<Link
-														to="/chat/$threadId"
-														params={{ threadId: thread._id }}
-														search={{
-															initialInput: undefined,
-															initialThinking: undefined,
-														}}
-														onClick={handleThreadClick}
-														preload="intent"
-														className="flex items-center gap-2 overflow-hidden min-w-0"
+									</SidebarGroupLabel>
+									<SidebarGroupContent>
+										<SidebarMenu>
+											{group.threads.map((thread) => (
+												<SidebarMenuItem key={thread._id}>
+													<SidebarMenuButton
+														asChild
+														isActive={currentThreadId === thread._id}
+														className={cn(
+															"transition-colors pr-8",
+															currentThreadId === thread._id &&
+																"bg-accent text-accent-foreground",
+														)}
 													>
-														<ThreadRow
-															threadId={thread._id}
-															title={thread.title}
-														/>
-													</Link>
-												</SidebarMenuButton>
-												<DropdownMenu open={isShiftPressed ? false : undefined}>
-													<DropdownMenuTrigger asChild>
-														<SidebarMenuAction
-															showOnHover
-															onClick={(e) => {
-																if (e.shiftKey) {
-																	e.preventDefault();
-																	e.stopPropagation();
-																	handleDeleteThread(thread._id);
-																}
+														<Link
+															to="/chat/$threadId"
+															params={{ threadId: thread._id }}
+															search={{
+																initialInput: undefined,
+																initialThinking: undefined,
 															}}
-															className={cn(
-																isShiftPressed &&
-																	"text-destructive hover:text-destructive hover:bg-destructive/10",
-															)}
+															onClick={handleThreadClick}
+															preload="intent"
+															className="flex items-center gap-2 overflow-hidden min-w-0"
 														>
-															<AnimatePresence mode="wait" initial={false}>
-																{isShiftPressed ? (
-																	<motion.div
-																		key="delete"
-																		initial={{
-																			opacity: 0,
-																			scale: 0.5,
-																			rotate: -90,
-																		}}
-																		animate={{
-																			opacity: 1,
-																			scale: 1,
-																			rotate: 0,
-																		}}
-																		exit={{
-																			opacity: 0,
-																			scale: 0.5,
-																			rotate: 90,
-																		}}
-																		transition={{ duration: 0.15 }}
-																	>
-																		<X className="h-5 w-5" />
-																	</motion.div>
-																) : (
-																	<motion.div
-																		key="more"
-																		initial={{ opacity: 0, scale: 0.5 }}
-																		animate={{ opacity: 1, scale: 1 }}
-																		exit={{ opacity: 0, scale: 0.5 }}
-																		transition={{ duration: 0.15 }}
-																	>
-																		<MoreHorizontal className="h-5 w-5" />
-																	</motion.div>
+															<ThreadRow
+																threadId={thread._id}
+																title={thread.title}
+															/>
+														</Link>
+													</SidebarMenuButton>
+													<DropdownMenu
+														open={isShiftPressed ? false : undefined}
+													>
+														<DropdownMenuTrigger asChild>
+															<SidebarMenuAction
+																showOnHover
+																onClick={(e) => {
+																	if (e.shiftKey) {
+																		e.preventDefault();
+																		e.stopPropagation();
+																		handleDeleteThread(thread._id);
+																	}
+																}}
+																className={cn(
+																	isShiftPressed &&
+																		"text-destructive hover:text-destructive hover:bg-destructive/10",
 																)}
-															</AnimatePresence>
-															<span className="sr-only">
-																{isShiftPressed
-																	? "Delete thread"
-																	: "More options"}
-															</span>
-														</SidebarMenuAction>
-													</DropdownMenuTrigger>
-													<DropdownMenuContent side="right" align="start">
-														<DropdownMenuItem
-															onClick={() =>
-																openRenameDialog(thread._id, thread.title)
-															}
-														>
-															<Pencil className="h-4 w-4 mr-2" />
-															Rename
-														</DropdownMenuItem>
-														<DropdownMenuItem
-															onClick={() => setThreadToDelete(thread._id)}
-															className="text-destructive focus:text-destructive"
-														>
-															<Trash2 className="h-4 w-4 mr-2" />
-															Delete
-														</DropdownMenuItem>
-													</DropdownMenuContent>
-												</DropdownMenu>
-											</SidebarMenuItem>
-										))}
-									</SidebarMenu>
-								</SidebarGroupContent>
-							</SidebarGroup>
-						))}
-					</div>
+															>
+																<AnimatePresence mode="wait" initial={false}>
+																	{isShiftPressed ? (
+																		<motion.div
+																			key="delete"
+																			initial={{
+																				opacity: 0,
+																				scale: 0.5,
+																				rotate: -90,
+																			}}
+																			animate={{
+																				opacity: 1,
+																				scale: 1,
+																				rotate: 0,
+																			}}
+																			exit={{
+																				opacity: 0,
+																				scale: 0.5,
+																				rotate: 90,
+																			}}
+																			transition={{ duration: 0.15 }}
+																		>
+																			<X className="h-5 w-5" />
+																		</motion.div>
+																	) : (
+																		<motion.div
+																			key="more"
+																			initial={{ opacity: 0, scale: 0.5 }}
+																			animate={{ opacity: 1, scale: 1 }}
+																			exit={{ opacity: 0, scale: 0.5 }}
+																			transition={{ duration: 0.15 }}
+																		>
+																			<MoreHorizontal className="h-5 w-5" />
+																		</motion.div>
+																	)}
+																</AnimatePresence>
+																<span className="sr-only">
+																	{isShiftPressed
+																		? "Delete thread"
+																		: "More options"}
+																</span>
+															</SidebarMenuAction>
+														</DropdownMenuTrigger>
+														<DropdownMenuContent side="right" align="start">
+															<DropdownMenuItem
+																onClick={() =>
+																	openRenameDialog(thread._id, thread.title)
+																}
+															>
+																<Pencil className="h-4 w-4 mr-2" />
+																Rename
+															</DropdownMenuItem>
+															<DropdownMenuItem
+																onClick={() => setThreadToDelete(thread._id)}
+																className="text-destructive focus:text-destructive"
+															>
+																<Trash2 className="h-4 w-4 mr-2" />
+																Delete
+															</DropdownMenuItem>
+														</DropdownMenuContent>
+													</DropdownMenu>
+												</SidebarMenuItem>
+											))}
+										</SidebarMenu>
+									</SidebarGroupContent>
+								</SidebarGroup>
+							))}
+						</div>
 					)}
 				</SidebarContent>
 

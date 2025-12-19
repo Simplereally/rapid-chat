@@ -63,7 +63,7 @@ export function useChatActions({
 		if (!chatInput.trim() || isLoading) return;
 
 		const thinkPrefix = isThinkingEnabled ? "/think " : "/no_think ";
-		const fullContent = thinkPrefix + chatInput;
+		const fullContent = chatInput;
 
 		// Get token first - we need this synchronously, but getToken is async
 		// Use a self-invoking async function to handle this
@@ -76,9 +76,17 @@ export function useChatActions({
 
 			// Configure persistence callback for assistant response
 			const persistAssistantMessage = async (message: UIMessage) => {
+				// Build content with <think> tags preserved so parseThinkingContent can re-extract them
+				// when loading from Convex. Without this, thinking and text content merge together.
 				const content = message.parts
 					.filter((part) => part.type === "text" || part.type === "thinking")
-					.map((part) => part.content)
+					.map((part) => {
+						if (part.type === "thinking") {
+							// Wrap thinking content in <think> tags so it can be parsed later
+							return `<think>${part.content}</think>`;
+						}
+						return part.content;
+					})
 					.join("");
 
 				// Convex handles retries automatically

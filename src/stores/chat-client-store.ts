@@ -32,7 +32,11 @@ export interface ChatRequestConfig {
 	apiEndpoint: string;
 	getAuthHeaders: () => Promise<Record<string, string>>;
 	/** Conversation history to load into the ChatClient before sending the new message */
-	conversationHistory?: Array<{ role: "user" | "assistant"; content: string; id?: string }>;
+	conversationHistory?: Array<{
+		role: "user" | "assistant";
+		content: string;
+		id?: string;
+	}>;
 	onFinish?: (message: UIMessage) => void | Promise<void>;
 	onError?: (error: Error) => void;
 }
@@ -73,6 +77,12 @@ interface ChatStore {
 	getStreamingThreadIds: () => string[];
 
 	getUnreadThreadIds: () => string[];
+
+	/** Respond to a tool approval request */
+	addToolApprovalResponse: (
+		threadId: string,
+		response: { id: string; approved: boolean },
+	) => Promise<void>;
 }
 
 /**
@@ -194,7 +204,38 @@ export const useChatClientStore = create<ChatStore>()(
 							});
 						},
 						onFinish: async (finishedMessage: UIMessage) => {
-							// Mark as completed
+							// Check if there are pending tool approvals
+							// If so, don't mark as truly "completed" - we're waiting for user input
+							const hasPendingApprovals = finishedMessage.parts.some(
+								(part) =>
+									part.type === "tool-call" &&
+									part.state === "approval-requested" &&
+									part.approval?.approved === undefined,
+							);
+
+							if (hasPendingApprovals) {
+								// Stream ended but we're waiting for approval
+								// Keep the streaming state active but not loading
+								set((state) => {
+									const updated = new Map(state.clients);
+									const current = updated.get(threadId);
+									if (current) {
+										updated.set(threadId, {
+											...current,
+											isLoading: false,
+											// Keep streaming status so the UI knows we're not done
+											streamingStatus: "streaming",
+											lastActivity: Date.now(),
+										});
+									}
+									return { clients: updated };
+								});
+								// Don't persist to Convex or broadcast completion yet
+								// The flow will continue after approval via continueFlow()
+								return;
+							}
+
+							// No pending approvals - truly complete
 							set((state) => {
 								const updated = new Map(state.clients);
 								const current = updated.get(threadId);
@@ -298,12 +339,14 @@ export const useChatClientStore = create<ChatStore>()(
 				// Load conversation history into the ChatClient BEFORE sending the new message
 				// This ensures the LLM has full context of the conversation
 				if (conversationHistory && conversationHistory.length > 0) {
-					const historyAsUIMessages: UIMessage[] = conversationHistory.map((msg, index) => ({
-						id: msg.id || `history-${index}`,
-						role: msg.role,
-						parts: [{ type: "text" as const, content: msg.content }],
-						createdAt: new Date(),
-					}));
+					const historyAsUIMessages: UIMessage[] = conversationHistory.map(
+						(msg, index) => ({
+							id: msg.id || `history-${index}`,
+							role: msg.role,
+							parts: [{ type: "text" as const, content: msg.content }],
+							createdAt: new Date(),
+						}),
+					);
 					client.setMessagesManually(historyAsUIMessages);
 				}
 
@@ -505,6 +548,15 @@ export const useChatClientStore = create<ChatStore>()(
 					}
 				}
 				return unreadIds;
+			},
+
+			addToolApprovalResponse: async (threadId, response) => {
+				const clientState = get().clients.get(threadId);
+				if (!clientState?.client) {
+					console.error("No client available for thread:", threadId);
+					return;
+				}
+				await clientState.client.addToolApprovalResponse(response);
 			},
 		}),
 		{ name: "ChatClientStore" },

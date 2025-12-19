@@ -1,6 +1,6 @@
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Bot } from "lucide-react";
 import type { RefObject } from "react";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import type { ParsedMessage } from "../types";
 import { ChatMessage } from "./chat-message";
 
@@ -19,6 +19,9 @@ interface ChatHistoryListProps {
 	copyToClipboard: (id: string, content: string) => void;
 	regenerateResponse: (id: string) => void;
 	getDisplayContent: (msg: ParsedMessage) => string;
+	// Tool approval callbacks
+	onApproveToolCall?: (approvalId: string) => void;
+	onDenyToolCall?: (approvalId: string) => void;
 }
 
 export function ChatHistoryList({
@@ -35,6 +38,8 @@ export function ChatHistoryList({
 	copyToClipboard,
 	regenerateResponse,
 	getDisplayContent,
+	onApproveToolCall,
+	onDenyToolCall,
 }: ChatHistoryListProps) {
 	return (
 		<ScrollArea className="flex-1 min-h-0 px-4" ref={scrollRef}>
@@ -77,6 +82,8 @@ export function ChatHistoryList({
 							onEditSubmit={submitEdit}
 							onEditCancel={cancelEditing}
 							hasActiveEdit={editingMessageId !== null}
+							onApproveToolCall={onApproveToolCall}
+							onDenyToolCall={onDenyToolCall}
 						/>
 					);
 				})}

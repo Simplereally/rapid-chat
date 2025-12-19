@@ -61,17 +61,23 @@ function parseMessage(
 /**
  * Get content fingerprint for change detection.
  * Much cheaper than comparing full objects.
+ * Includes tool call states to ensure cache invalidation on approval changes.
  */
 function getContentFingerprint(message: ChatUiMessage): string {
 	const parts = message.parts || [];
 	let totalLength = 0;
+	let toolStates = "";
 	for (const part of parts) {
-		const p = part as { content?: string; text?: string };
+		const p = part as { content?: string; text?: string; state?: string; approval?: { approved?: boolean } };
 		if (typeof p.content === "string") totalLength += p.content.length;
 		if (typeof p.text === "string") totalLength += p.text.length;
+		// Include tool call state and approval status in fingerprint
+		if (p.state) toolStates += p.state;
+		if (p.approval?.approved !== undefined) toolStates += p.approval.approved ? "1" : "0";
 	}
-	return `${message.id}:${parts.length}:${totalLength}`;
+	return `${message.id}:${parts.length}:${totalLength}:${toolStates}`;
 }
+
 
 export function useParsedMessages(
 	displayMessages: ChatUiMessage[],

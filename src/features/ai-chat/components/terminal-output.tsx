@@ -1,6 +1,7 @@
-import { CheckCircle, XCircle, Terminal, Clock, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Check, CheckCircle, Clock, Loader2, Terminal, X, XCircle } from "lucide-react";
+import { useState } from "react";
 
 interface TerminalOutputProps {
 	command: string;
@@ -14,6 +15,10 @@ interface TerminalOutputProps {
 	};
 	isExecuting?: boolean;
 	isApprovalRequired?: boolean;
+	/** Called when user approves the command (required when isApprovalRequired is true) */
+	onApprove?: () => void;
+	/** Called when user denies the command (required when isApprovalRequired is true) */
+	onDeny?: () => void;
 }
 
 /**
@@ -25,6 +30,8 @@ export function TerminalOutput({
 	output,
 	isExecuting,
 	isApprovalRequired,
+	onApprove,
+	onDeny,
 }: TerminalOutputProps) {
 	const [isExpanded, setIsExpanded] = useState(true);
 	
@@ -110,10 +117,31 @@ export function TerminalOutput({
 				</div>
 			)}
 			
-			{/* Waiting for approval state */}
+			{/* Waiting for approval state - with action buttons */}
 			{isApprovalRequired && !output && (
-				<div className="px-3 py-2 text-warning/80 text-xs italic">
-					Waiting for approval to execute...
+				<div className="px-3 py-3 space-y-3">
+					<p className="text-warning/80 text-xs italic">
+						This command requires your approval to execute.
+					</p>
+					<div className="flex gap-2">
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={onDeny}
+							className="flex-1 gap-1.5 text-muted-foreground hover:text-destructive hover:border-destructive"
+						>
+							<X className="h-3.5 w-3.5" />
+							Deny
+						</Button>
+						<Button
+							size="sm"
+							onClick={onApprove}
+							className="flex-1 gap-1.5"
+						>
+							<Check className="h-3.5 w-3.5" />
+							Run
+						</Button>
+					</div>
 				</div>
 			)}
 			
@@ -126,3 +154,4 @@ export function TerminalOutput({
 		</div>
 	);
 }
+

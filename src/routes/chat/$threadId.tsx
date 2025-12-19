@@ -1,8 +1,8 @@
 import { Button } from "@/components/ui/button";
 import {
-	ChatHeader,
-	ChatInputForm,
-	useMessageActions,
+    ChatHeader,
+    ChatInputForm,
+    useMessageActions,
 } from "@/features/ai-chat";
 import { ChatHistoryList } from "@/features/ai-chat/components/chat-history-list";
 import { useChat } from "@/features/ai-chat/hooks/use-chat";
@@ -80,7 +80,7 @@ function ChatThreadPage() {
 	);
 
 	// 4. TanStack AI Chat State
-	const { isLoading, stop, append, isTokenLoaded } = useChat({
+	const { isLoading, stop, append, isTokenLoaded, addToolApprovalResponse } = useChat({
 		threadId,
 	});
 
@@ -232,6 +232,9 @@ function ChatThreadPage() {
 				copyToClipboard={activeMessageActions.copyToClipboard}
 				regenerateResponse={activeMessageActions.regenerateResponse}
 				getDisplayContent={activeMessageActions.getDisplayContent}
+				// Tool approval callbacks
+				onApproveToolCall={(approvalId) => addToolApprovalResponse({ id: approvalId, approved: true })}
+				onDenyToolCall={(approvalId) => addToolApprovalResponse({ id: approvalId, approved: false })}
 			/>
 
 			<div className="relative shrink-0 border-t border-border bg-background px-4 pt-2 pb-4">

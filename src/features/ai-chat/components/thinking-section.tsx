@@ -1,11 +1,11 @@
-import { Brain, ChevronDown, ChevronUp } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
-	Collapsible,
-	CollapsibleContent,
-	CollapsibleTrigger,
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { Brain, ChevronDown, ChevronUp } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 interface ThinkingSectionProps {
 	content: string;
@@ -15,19 +15,29 @@ interface ThinkingSectionProps {
 /**
  * Component to display collapsible thinking/reasoning content.
  * Uses Shadcn Collapsible for proper accessibility and animation.
+ * 
+ * Behavior:
+ * - Starts EXPANDED when streaming reasoning (isThinking=true)
+ * - Auto-collapses when reasoning finishes (isThinking transitions false)
+ * - Stays collapsed for persisted/loaded messages
  */
 export function ThinkingSection({ content, isThinking }: ThinkingSectionProps) {
+	// Start expanded when actively thinking, collapsed for persisted content
 	const [isOpen, setIsOpen] = useState(isThinking);
 	const prevThinkingRef = useRef(isThinking);
+	// Track if we've auto-collapsed to avoid re-collapsing on subsequent renders
+	const hasAutoCollapsedRef = useRef(false);
 
-	// Handle transition from thinking -> done
+	// Handle transition from thinking -> done (auto-collapse when reasoning finishes)
 	useEffect(() => {
-		if (prevThinkingRef.current && !isThinking) {
-			// Transitioning from thinking to done: Collapse automatically
+		if (prevThinkingRef.current && !isThinking && !hasAutoCollapsedRef.current) {
+			// Reasoning just finished: Collapse automatically
 			setIsOpen(false);
+			hasAutoCollapsedRef.current = true;
 		} else if (!prevThinkingRef.current && isThinking) {
-			// Transitioning from done/start to thinking: Expand automatically
+			// Starting to think: Expand automatically and reset collapse tracking
 			setIsOpen(true);
+			hasAutoCollapsedRef.current = false;
 		}
 		prevThinkingRef.current = isThinking;
 	}, [isThinking]);
