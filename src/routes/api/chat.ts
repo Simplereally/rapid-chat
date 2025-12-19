@@ -190,7 +190,7 @@ export const Route = createFileRoute("/api/chat")({
 								chunkCount++;
 								console.log(
 									`[Chat Debug] Chunk #${chunkCount}:`,
-									JSON.stringify(chunk),
+									JSON.stringify(chunk).slice(0, 50),
 								);
 								yield chunk;
 							}

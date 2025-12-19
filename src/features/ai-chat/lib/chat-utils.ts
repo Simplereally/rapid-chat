@@ -76,3 +76,4 @@ export const BLINK_ANIMATION_CSS = `
   animation: blink 1s step-end infinite;
 }
 `;
+
