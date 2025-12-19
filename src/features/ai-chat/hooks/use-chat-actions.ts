@@ -1,9 +1,10 @@
+import { useChatClientStore } from "@/stores/chat-client-store";
 import type { UIMessage } from "@tanstack/ai-react";
 import { useMutation } from "convex/react";
 import { useCallback, useRef } from "react";
-import { useChatClientStore } from "@/stores/chat-client-store";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
+import { serializeMessageParts } from "../lib/message-serialization";
 import { triggerTitleGeneration } from "../lib/title-generation";
 
 interface UseChatActionsProps {
@@ -62,7 +63,6 @@ export function useChatActions({
 	const handleSubmit = (chatInput: string): void => {
 		if (!chatInput.trim() || isLoading) return;
 
-		const thinkPrefix = isThinkingEnabled ? "/think " : "/no_think ";
 		const fullContent = chatInput;
 
 		// Get token first - we need this synchronously, but getToken is async
@@ -76,18 +76,11 @@ export function useChatActions({
 
 			// Configure persistence callback for assistant response
 			const persistAssistantMessage = async (message: UIMessage) => {
-				// Build content with <think> tags preserved so parseThinkingContent can re-extract them
-				// when loading from Convex. Without this, thinking and text content merge together.
-				const content = message.parts
-					.filter((part) => part.type === "text" || part.type === "thinking")
-					.map((part) => {
-						if (part.type === "thinking") {
-							// Wrap thinking content in <think> tags so it can be parsed later
-							return `<think>${part.content}</think>`;
-						}
-						return part.content;
-					})
-					.join("");
+				// Serialize all message parts including tool calls for Convex storage
+				// This preserves tool call information so it survives page reloads
+				const content = serializeMessageParts(
+					message.parts as Array<{ type: string; content?: string; [key: string]: unknown }>,
+				);
 
 				// Convex handles retries automatically
 				await addMessage({

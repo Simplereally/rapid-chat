@@ -1,8 +1,8 @@
-import { AlertTriangle, Bot, User } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { MarkdownMessage } from "@/components/ui/markdown-message";
+import { AlertTriangle, Bot, User } from "lucide-react";
 import { stripThinkPrefix } from "../lib/chat-utils";
 import type { ParsedMessage, ParsedTextPart } from "../types";
 import { ChatMessageActions } from "./chat-message-actions";
@@ -29,6 +29,39 @@ interface ChatMessageProps {
 	// Tool approval callbacks
 	onApproveToolCall?: (approvalId: string) => void;
 	onDenyToolCall?: (approvalId: string) => void;
+}
+
+/**
+ * Find the tool-result part that corresponds to a tool-call by ID.
+ * Server-executed tools create a separate tool-result part instead of
+ * setting output directly on the tool-call part.
+ */
+function findToolResultForCall(
+	parts: ParsedMessage["parsedParts"],
+	toolCallId: string,
+): unknown {
+	for (const part of parts) {
+		if (
+			part &&
+			typeof part === "object" &&
+			"type" in part &&
+			part.type === "tool-result" &&
+			"toolCallId" in part &&
+			part.toolCallId === toolCallId
+		) {
+			// Parse the content as JSON if possible (tool results are usually JSON strings)
+			const resultPart = part as { content?: string; state?: string };
+			if (resultPart.content !== undefined) {
+				try {
+					return JSON.parse(resultPart.content);
+				} catch {
+					// Return raw content if not valid JSON
+					return resultPart.content;
+				}
+			}
+		}
+	}
+	return undefined;
 }
 
 function getTextContent(parts: ParsedMessage["parsedParts"]): string {
@@ -262,6 +295,13 @@ export function ChatMessage({
 											// Invalid JSON, use empty object
 										}
 
+										// Get effective output: prefer direct output, else check for matching tool-result
+										// Server-executed tools create a separate tool-result part instead of
+										// setting output directly on the tool-call part
+										const effectiveOutput =
+											toolPart.output ??
+											findToolResultForCall(message.parsedParts, toolPart.id);
+
 										// Special handling for bash - always show terminal output
 										if (toolPart.name === "bash") {
 											const command =
@@ -271,7 +311,7 @@ export function ChatMessage({
 											const isApprovalRequired =
 												toolPart.state === "approval-requested";
 											const isExecuting =
-												toolPart.output === undefined && !isApprovalRequired;
+												effectiveOutput === undefined && !isApprovalRequired;
 											const approvalId = toolPart.approval?.id;
 
 											// Parse output if available
@@ -286,20 +326,20 @@ export function ChatMessage({
 												  }
 												| undefined;
 
-											if (toolPart.output !== undefined) {
+											if (effectiveOutput !== undefined) {
 												try {
-													if (typeof toolPart.output === "string") {
-														parsedOutput = JSON.parse(toolPart.output);
+													if (typeof effectiveOutput === "string") {
+														parsedOutput = JSON.parse(effectiveOutput);
 													} else {
 														parsedOutput =
-															toolPart.output as typeof parsedOutput;
+															effectiveOutput as typeof parsedOutput;
 													}
 												} catch {
 													// Fallback if output is just a string
 													parsedOutput = {
 														success: true,
 														exitCode: 0,
-														stdout: String(toolPart.output),
+														stdout: String(effectiveOutput),
 														stderr: "",
 														timedOut: false,
 														executionTime: 0,
@@ -335,7 +375,7 @@ export function ChatMessage({
 												toolName={toolPart.name as any}
 												args={parsedArgs}
 												state={toolPart.state}
-												output={toolPart.output}
+												output={effectiveOutput}
 											/>
 										);
 									}

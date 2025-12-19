@@ -10,6 +10,7 @@ import { useChatActions } from "@/features/ai-chat/hooks/use-chat-actions";
 import { useChatInitializationLogic } from "@/features/ai-chat/hooks/use-chat-initialization";
 import { useChatScroll } from "@/features/ai-chat/hooks/use-chat-scroll";
 import { useParsedMessages } from "@/features/ai-chat/hooks/use-parsed-messages";
+import { deserializeMessageParts } from "@/features/ai-chat/lib/message-serialization";
 import { useChatClientStore } from "@/stores/chat-client-store";
 import { useAuth } from "@clerk/tanstack-react-start";
 import type { UIMessage } from "@tanstack/ai-react";
@@ -91,12 +92,20 @@ function ChatThreadPage() {
 		if (!convexMessages) return streamingMessages;
 
 		// Convert Convex messages to UI format
-		const persistedMessages = convexMessages.map((msg) => ({
-			id: msg._id,
-			role: msg.role as "user" | "assistant",
-			parts: [{ type: "text" as const, content: msg.content }],
-			createdAt: msg.createdAt ? new Date(msg.createdAt) : undefined,
-		}));
+		// For assistant messages, deserialize parts to restore tool calls
+		const persistedMessages = convexMessages.map((msg) => {
+			// Deserialize message parts (handles both old text-only format and new format with tool calls)
+			const parts = msg.role === "assistant"
+				? deserializeMessageParts(msg.content)
+				: [{ type: "text" as const, content: msg.content }];
+
+			return {
+				id: msg._id,
+				role: msg.role as "user" | "assistant",
+				parts: parts as UIMessage["parts"],
+				createdAt: msg.createdAt ? new Date(msg.createdAt) : undefined,
+			};
+		});
 
 		// If no streaming messages, return persisted only
 		if (streamingMessages.length === 0) {
