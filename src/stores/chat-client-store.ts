@@ -1,6 +1,7 @@
 // @ts-nocheck - Types are used in interface definitions
 
-import { ChatClient, fetchServerSentEvents } from "@tanstack/ai-client";
+import { ChatClient } from "@tanstack/ai-client";
+import { fetchServerSentEventsWithParts } from "@/lib/custom-connection";
 import type { UIMessage } from "@tanstack/ai-react";
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
@@ -134,12 +135,27 @@ export const useChatClientStore = create<ChatStore>()(
 
 				// Create ChatClient if doesn't exist
 				if (!clientState || !clientState.client) {
+					// We need a reference to the client to get current messages for each request
+					// Using a mutable ref that will be set after client creation
+					let clientRef: ChatClient | null = null;
+
 					const client = new ChatClient({
-						connection: fetchServerSentEvents(
+						connection: fetchServerSentEventsWithParts(
 							() => apiEndpoint,
-							async () => ({
-								headers: await getAuthHeaders(),
-							}),
+							async () => {
+								const headers = await getAuthHeaders();
+								// Get current UIMessages from the client (with approval state in parts)
+								// This is called on EVERY request, so we get the latest state
+								const uiMessages = clientRef?.getMessages() || [];
+								return {
+									headers,
+									body: {
+										// Include UIMessages with parts in the body
+										// The server will use this to extract approval state
+										uiMessages: uiMessages,
+									},
+								};
+							},
 						),
 						onMessagesChange: (newMessages: UIMessage[]) => {
 							// Sync messages to Zustand store
@@ -289,6 +305,9 @@ export const useChatClientStore = create<ChatStore>()(
 							}
 						},
 					});
+
+					// Set the client reference so the connection options function can access it
+					clientRef = client;
 
 					// Initialize client state in store
 					const newState: ChatClientState = {

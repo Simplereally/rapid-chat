@@ -90,15 +90,63 @@ const BASE_SYSTEM_PROMPT = `You are an agentic reasoning assistant with advanced
 
 Reason deeply when needed. Act decisively when obvious.`;
 
+// Schema for UIMessage parts (from @tanstack/ai-client)
+const ToolCallPartSchema = z.object({
+	type: z.literal("tool-call"),
+	id: z.string(),
+	name: z.string(),
+	arguments: z.string(),
+	state: z.enum([
+		"awaiting-input",
+		"input-streaming",
+		"input-complete",
+		"approval-requested",
+		"approval-responded",
+	]).optional(),
+	input: z.any().optional(),
+	approval: z.object({
+		id: z.string(),
+		needsApproval: z.boolean().optional(),
+		approved: z.boolean().optional(),
+	}).optional(),
+	output: z.any().optional(),
+});
+
+const MessagePartSchema = z.discriminatedUnion("type", [
+	z.object({
+		type: z.literal("text"),
+		content: z.string(),
+	}),
+	ToolCallPartSchema,
+	z.object({
+		type: z.literal("tool-result"),
+		toolCallId: z.string(),
+		content: z.string(),
+		state: z.enum(["streaming", "complete", "error"]).optional(),
+		error: z.string().optional(),
+	}),
+	z.object({
+		type: z.literal("thinking"),
+		content: z.string(),
+	}),
+]);
+
+// Accepts both ModelMessage format and UIMessage format (with parts)
 const MessageSchema = z
 	.object({
 		role: z.enum(["system", "user", "assistant", "tool"]),
 		content: z.string().nullable().optional(),
+		// UIMessage format - has parts array
+		parts: z.array(MessagePartSchema).optional(),
+		id: z.string().optional(),
 	})
 	.passthrough(); // Allow additional fields like toolCalls, toolCallId without validation
 
 const ChatRequestSchema = z.object({
 	messages: z.array(MessageSchema),
+	// UIMessages with parts (including approval state) from client
+	// This allows the server to extract approval responses for tool execution
+	uiMessages: z.array(MessageSchema).optional(),
 });
 
 export const Route = createFileRoute("/api/chat")({
@@ -120,12 +168,25 @@ export const Route = createFileRoute("/api/chat")({
 						return new Response("Invalid Request Body", { status: 400 });
 					}
 
-					const { messages: incomingMessages } = validationResult.data;
+					const { messages: incomingMessages, uiMessages } = validationResult.data;
 					const authHeader = request.headers.get("Authorization");
 
 					if (!authHeader) {
 						return new Response("Unauthorized", { status: 401 });
 					}
+
+					// Build a map from UIMessage id to parts (for approval state extraction)
+					// UIMessages contain 'parts' with tool-call approval state
+					const uiPartsById = new Map<string, unknown[]>();
+					if (uiMessages && uiMessages.length > 0) {
+						for (const uiMsg of uiMessages) {
+							if (uiMsg.role === "assistant" && uiMsg.parts && uiMsg.id) {
+								uiPartsById.set(uiMsg.id, uiMsg.parts);
+							}
+						}
+					}
+
+					console.log(`[Chat Debug] UIMessages with parts: ${uiPartsById.size}`);
 
 					// Separate system messages for systemPrompts and filter conversation messages
 					const clientSystemPrompts = incomingMessages
@@ -138,6 +199,8 @@ export const Route = createFileRoute("/api/chat")({
 					// Combine base system prompt with any client-provided prompts
 					const allSystemPrompts = [BASE_SYSTEM_PROMPT, ...clientSystemPrompts];
 
+					// Use ModelMessages as base, but attach parts from UIMessages for approval detection
+					// The chat engine's collectClientState() needs 'parts' array to extract approvals
 					const conversationMessages = incomingMessages
 						.filter(
 							(m) =>
@@ -145,7 +208,30 @@ export const Route = createFileRoute("/api/chat")({
 								m.role === "assistant" ||
 								m.role === "tool",
 						)
-						.map((m) => m as unknown as ModelMessage<string | null>);
+						.map((m) => {
+							// For assistant messages, try to find matching UIMessage and attach its parts
+							// This allows collectClientState() to find approval-responded state
+							if (m.role === "assistant" && uiMessages && uiMessages.length > 0) {
+								// Find the matching UIMessage by index (since we filter the same way)
+								const assistantIndex = incomingMessages
+									.slice(0, incomingMessages.indexOf(m) + 1)
+									.filter(msg => msg.role === "assistant")
+									.length - 1;
+								
+								const matchingUIMsg = uiMessages.filter(
+									ui => ui.role === "assistant"
+								)[assistantIndex];
+								
+								if (matchingUIMsg?.parts && matchingUIMsg.parts.length > 0) {
+									// Attach parts to the ModelMessage for collectClientState()
+									return {
+										...m,
+										parts: matchingUIMsg.parts,
+									} as unknown as ModelMessage<string | null>;
+								}
+							}
+							return m as unknown as ModelMessage<string | null>;
+						});
 
 					// Agent loop strategy: Continue looping when model wants to use tools
 					// Max 10 iterations for safety (prevents infinite loops)

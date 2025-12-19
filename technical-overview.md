@@ -60,8 +60,10 @@ interface ChatClientState {
 
 ```typescript
 POST /api/chat?threadId={id}
-Body: { messages: ModelMessage[] }
+Body: { messages: ModelMessage[], uiMessages?: UIMessage[] }
 ```
+
+`uiMessages` contains full UIMessage format with `parts` (for tool approval state).
 
 The `chat()` function from `@tanstack/ai`:
 - Connects to Ollama adapter
@@ -82,6 +84,14 @@ LLM Request → Tool Call Response → Execute Tool → Add Result → Loop Back
 4. Loop continues until `finishReason: "stop"`
 
 **Tools requiring approval** pause the loop and emit `approval-requested` chunks.
+
+**Tool Approval Flow**:
+1. Server emits `approval-requested` chunk with approval ID
+2. Client updates `UIMessage.parts` with approval metadata
+3. User approves → `part.state` set to `approval-responded`
+4. Client sends new request with `uiMessages` in body (containing approval state)
+5. Server merges `parts` onto `ModelMessages` for `collectClientState()`
+6. Server's `ChatEngine` finds approval, executes tool, continues loop
 
 ### 5. Client Receives Stream
 
@@ -120,6 +130,7 @@ nukeStreamingState(threadId);
 | `src/features/ai-chat/hooks/use-chat-actions.ts` | Submit handler, persistence logic |
 | `src/features/ai-chat/lib/message-serialization.ts` | Serialize/deserialize tool calls for Convex |
 | `src/routes/api/chat.ts` | API route, calls `chat()` with Ollama |
+| `src/lib/custom-connection.ts` | Custom SSE adapter preserving UIMessages for approval flow |
 | `src/tools/` | Tool definitions (ls, read, write, bash, etc.) |
 | `convex/messages.ts` | Convex mutations/queries for messages |
 
@@ -241,6 +252,12 @@ LLM → tool_call chunk → executeToolCalls() → tool_result chunk → LLM
 LLM → tool_call chunk → approval-requested chunk → Client responds → continue
 ```
 
+**Approval State Transport**:
+- `ChatClient.addToolApprovalResponse()` updates `UIMessage.parts` with `approval-responded` state
+- Custom connection adapter (`fetchServerSentEventsWithParts`) includes `uiMessages` in request body
+- Server merges `parts` from `uiMessages` onto `ModelMessages`
+- `ChatEngine.collectClientState()` extracts approvals from `message.parts`
+
 ---
 
 ## State Management
@@ -325,8 +342,10 @@ VITE_CONVEX_URL=https://...             # Convex deployment URL
 
 Client-side orchestrator:
 - Manages `StreamProcessor` for message state
-- Connects to server via `fetchServerSentEvents`
+- Connects to server via custom `fetchServerSentEventsWithParts` adapter
 - Handles tool approval flows
+
+**Note**: Standard `fetchServerSentEvents` converts UIMessages to ModelMessages, losing `parts`. The custom adapter passes `uiMessages` in the body to preserve approval state.
 
 ### chat() (`@tanstack/ai`)
 
