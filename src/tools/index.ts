@@ -1,60 +1,77 @@
 /**
- * AI Tools - Claude Code Aligned
+ * AI Tools - Pattern B Refactor
  *
  * This module exports all available tools for use with TanStack AI.
- * Tools are named and structured to align with Claude Code conventions.
+ * Tools are organized into three categories:
  *
- * Tool Categories:
+ * 1. DEFINITIONS - Tool specifications only (no execute) for server chat()
+ *    Used when the server should NOT execute tools (client handles approval + execution)
  *
- * Direct file IO:
- * - read: Read files (text, images, PDFs)
- * - write: Create or overwrite files [Requires Permission]
- * - edit: Single find-and-replace in a file [Requires Permission]
- * - multi_edit: Batch multiple Edit operations [Requires Permission]
+ * 2. CLIENT TOOLS - Browser-side tool implementations that call execution APIs
+ *    Used by ChatClient for tools requiring approval
  *
- * Search / Discovery:
- * - glob: Find files by pattern
- * - grep: Search file contents by regex
- * - ls: List directory contents
+ * 3. SAFE TOOLS - Complete tools with execute functions (auto-execute, no approval)
+ *    Used for read-only operations that don't need user approval
  *
- * Shell / Terminal:
- * - bash: Execute shell commands [Requires Permission]
- *
- * External:
- * - web_search: Search the web for information
- *
- * Permission Strategy:
- * - Read-only tools: `needsApproval: false` - auto-execute
- * - Write/destructive tools: `needsApproval: true` - require user permission
+ * Pattern B Flow:
+ * - Server: chat({ tools: [bashToolDef, ...safeTools] })  // definitions for approval-required
+ * - Client: ChatClient({ tools: [bashToolClient, ...] })  // client handles execution
  */
 
 // =============================================================================
-// DIRECT FILE IO
+// TOOL DEFINITIONS (for server chat() and type inference)
+// =============================================================================
+
+export {
+	bashToolDef,
+	bashInputSchema,
+	bashOutputSchema,
+	type BashInput,
+	type BashOutput,
+} from "./definitions/bash";
+
+export {
+	writeToolDef,
+	writeInputSchema,
+	writeOutputSchema,
+	type WriteInput,
+	type WriteOutput,
+} from "./definitions/write";
+
+export {
+	editToolDef,
+	editInputSchema,
+	editOutputSchema,
+	type EditInput,
+	type EditOutput,
+} from "./definitions/edit";
+
+export {
+	multiEditToolDef,
+	multiEditInputSchema,
+	multiEditOutputSchema,
+	type MultiEditInput,
+	type MultiEditOutput,
+} from "./definitions/multi-edit";
+
+// =============================================================================
+// CLIENT TOOLS (for ChatClient registration - browser-side execution)
+// =============================================================================
+
+export { bashToolClient } from "./client/bash.client";
+export { writeToolClient } from "./client/write.client";
+export { editToolClient } from "./client/edit.client";
+export { multiEditToolClient } from "./client/multi-edit.client";
+
+// =============================================================================
+// SAFE TOOLS (auto-execute, no approval needed)
+// These keep the full Tool structure with execute function
 // =============================================================================
 
 // Read - Read files (text, images, PDFs)
 export { readTool } from "./read";
 export type { ReadInput, ReadOutput } from "./read";
 export { readInputSchema, readOutputSchema } from "./read";
-
-// Write - Create or overwrite files [Requires Permission]
-export { writeTool } from "./write";
-export type { WriteInput, WriteOutput } from "./write";
-export { writeInputSchema, writeOutputSchema } from "./write";
-
-// Edit - Single find-and-replace [Requires Permission]
-export { editTool } from "./edit";
-export type { EditInput, EditOutput } from "./edit";
-export { editInputSchema, editOutputSchema } from "./edit";
-
-// MultiEdit - Batch edit operations [Requires Permission]
-export { multiEditTool } from "./multi-edit";
-export type { MultiEditInput, MultiEditOutput } from "./multi-edit";
-export { multiEditInputSchema, multiEditOutputSchema } from "./multi-edit";
-
-// =============================================================================
-// SEARCH / DISCOVERY
-// =============================================================================
 
 // Glob - Find files by pattern
 export { globTool } from "./glob";
@@ -71,20 +88,7 @@ export { lsTool } from "./ls";
 export type { LsInput, LsOutput } from "./ls";
 export { lsInputSchema, lsOutputSchema } from "./ls";
 
-// =============================================================================
-// SHELL / TERMINAL
-// =============================================================================
-
-// Bash - Execute shell commands [Requires Permission]
-export { bashTool } from "./bash";
-export type { BashInput, BashOutput } from "./bash";
-export { bashInputSchema, bashOutputSchema } from "./bash";
-
-// =============================================================================
-// EXTERNAL
-// =============================================================================
-
-// Web Search
+// Web Search - Search the web for information
 export { webSearchTool } from "./web-search";
 export type { WebSearchInput, WebSearchOutput } from "./web-search";
 
@@ -99,75 +103,28 @@ export { resolveSafePath } from "./file-utils";
 // =============================================================================
 
 import { readTool } from "./read";
-import { writeTool } from "./write";
-import { editTool } from "./edit";
-import { multiEditTool } from "./multi-edit";
 import { globTool } from "./glob";
 import { grepTool } from "./grep";
 import { lsTool } from "./ls";
-import { bashTool } from "./bash";
 import { webSearchTool } from "./web-search";
 
-/**
- * All file-IO tools aligned with Claude Code conventions
- */
-export const fileIOTools = {
-	// Direct file IO
-	read: readTool,
-	write: writeTool,
-	edit: editTool,
-	multiEdit: multiEditTool,
-	// Search / Discovery
-	glob: globTool,
-	grep: grepTool,
-	ls: lsTool,
-} as const;
+import {
+	bashToolDef,
+	writeToolDef,
+	editToolDef,
+	multiEditToolDef,
+} from "./definitions";
 
-/**
- * Array of all file-IO tools for easy spreading into tool configs
- */
-export const fileIOToolsArray = [
-	readTool,
-	writeTool,
-	editTool,
-	multiEditTool,
-	globTool,
-	grepTool,
-	lsTool,
-] as const;
-
-/**
- * Shell/Terminal tools
- */
-export const shellTools = {
-	bash: bashTool,
-} as const;
-
-/**
- * All tools including web search and shell
- */
-export const allTools = {
-	...fileIOTools,
-	...shellTools,
-	webSearch: webSearchTool,
-} as const;
-
-/**
- * Array of all tools
- */
-export const allToolsArray = [
-	...fileIOToolsArray,
-	bashTool,
-	webSearchTool,
-] as const;
-
-/**
- * Type-safe union of all available tool names
- */
-export type ToolName = (typeof allToolsArray)[number]["name"];
+import {
+	bashToolClient,
+	writeToolClient,
+	editToolClient,
+	multiEditToolClient,
+} from "./client";
 
 /**
  * Safe tools that don't require user approval (read-only operations)
+ * These have execute functions and auto-execute on the server
  */
 export const safeTools = [
 	readTool,
@@ -178,11 +135,47 @@ export const safeTools = [
 ] as const;
 
 /**
- * Dangerous tools that require user approval (write/execute operations)
+ * Tool DEFINITIONS for approval-required tools
+ * These have NO execute function - server emits tool-input-available chunks
  */
-export const dangerousTools = [
-	writeTool,
-	editTool,
-	multiEditTool,
-	bashTool,
+export const approvalToolDefs = [
+	bashToolDef,
+	writeToolDef,
+	editToolDef,
+	multiEditToolDef,
 ] as const;
+
+/**
+ * All tool definitions for server chat() call
+ * Mix of safe tools (full Tool with execute) and definitions (no execute)
+ */
+export const allServerTools = [
+	...safeTools,
+	...approvalToolDefs,
+] as const;
+
+/**
+ * Client tools for ChatClient registration
+ * These are called by the client after user approval
+ */
+export const clientTools = [
+	bashToolClient,
+	writeToolClient,
+	editToolClient,
+	multiEditToolClient,
+] as const;
+
+export * from "./types";
+
+
+// =============================================================================
+// LEGACY EXPORTS (for backward compatibility during migration)
+// These re-export the old tool structures - can be removed after full migration
+// =============================================================================
+
+// Legacy full tool exports - kept for backward compatibility
+// These are the original tools with execute functions bundled
+export { bashTool } from "./bash";
+export { writeTool } from "./write";
+export { editTool } from "./edit";
+export { multiEditTool } from "./multi-edit";

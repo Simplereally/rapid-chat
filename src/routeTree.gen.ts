@@ -21,6 +21,10 @@ import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AboutYouRouteImport } from './routes/about/you'
 import { Route as AboutTestRouteImport } from './routes/about/test'
 import { Route as AboutMeRouteImport } from './routes/about/me'
+import { Route as ApiToolsWriteRouteImport } from './routes/api/tools/write'
+import { Route as ApiToolsMultiEditRouteImport } from './routes/api/tools/multi-edit'
+import { Route as ApiToolsEditRouteImport } from './routes/api/tools/edit'
+import { Route as ApiToolsBashRouteImport } from './routes/api/tools/bash'
 
 const ChatRoute = ChatRouteImport.update({
   id: '/chat',
@@ -82,6 +86,26 @@ const AboutMeRoute = AboutMeRouteImport.update({
   path: '/about/me',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiToolsWriteRoute = ApiToolsWriteRouteImport.update({
+  id: '/api/tools/write',
+  path: '/api/tools/write',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiToolsMultiEditRoute = ApiToolsMultiEditRouteImport.update({
+  id: '/api/tools/multi-edit',
+  path: '/api/tools/multi-edit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiToolsEditRoute = ApiToolsEditRouteImport.update({
+  id: '/api/tools/edit',
+  path: '/api/tools/edit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiToolsBashRoute = ApiToolsBashRouteImport.update({
+  id: '/api/tools/bash',
+  path: '/api/tools/bash',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -96,6 +120,10 @@ export interface FileRoutesByFullPath {
   '/sign-in/$': typeof SignInSplatRoute
   '/sign-up/$': typeof SignUpSplatRoute
   '/chat/': typeof ChatIndexRoute
+  '/api/tools/bash': typeof ApiToolsBashRoute
+  '/api/tools/edit': typeof ApiToolsEditRoute
+  '/api/tools/multi-edit': typeof ApiToolsMultiEditRoute
+  '/api/tools/write': typeof ApiToolsWriteRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -109,6 +137,10 @@ export interface FileRoutesByTo {
   '/sign-in/$': typeof SignInSplatRoute
   '/sign-up/$': typeof SignUpSplatRoute
   '/chat': typeof ChatIndexRoute
+  '/api/tools/bash': typeof ApiToolsBashRoute
+  '/api/tools/edit': typeof ApiToolsEditRoute
+  '/api/tools/multi-edit': typeof ApiToolsMultiEditRoute
+  '/api/tools/write': typeof ApiToolsWriteRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -124,6 +156,10 @@ export interface FileRoutesById {
   '/sign-in/$': typeof SignInSplatRoute
   '/sign-up/$': typeof SignUpSplatRoute
   '/chat/': typeof ChatIndexRoute
+  '/api/tools/bash': typeof ApiToolsBashRoute
+  '/api/tools/edit': typeof ApiToolsEditRoute
+  '/api/tools/multi-edit': typeof ApiToolsMultiEditRoute
+  '/api/tools/write': typeof ApiToolsWriteRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -140,6 +176,10 @@ export interface FileRouteTypes {
     | '/sign-in/$'
     | '/sign-up/$'
     | '/chat/'
+    | '/api/tools/bash'
+    | '/api/tools/edit'
+    | '/api/tools/multi-edit'
+    | '/api/tools/write'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -153,6 +193,10 @@ export interface FileRouteTypes {
     | '/sign-in/$'
     | '/sign-up/$'
     | '/chat'
+    | '/api/tools/bash'
+    | '/api/tools/edit'
+    | '/api/tools/multi-edit'
+    | '/api/tools/write'
   id:
     | '__root__'
     | '/'
@@ -167,6 +211,10 @@ export interface FileRouteTypes {
     | '/sign-in/$'
     | '/sign-up/$'
     | '/chat/'
+    | '/api/tools/bash'
+    | '/api/tools/edit'
+    | '/api/tools/multi-edit'
+    | '/api/tools/write'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -180,6 +228,10 @@ export interface RootRouteChildren {
   ExampleShowcaseRoute: typeof ExampleShowcaseRoute
   SignInSplatRoute: typeof SignInSplatRoute
   SignUpSplatRoute: typeof SignUpSplatRoute
+  ApiToolsBashRoute: typeof ApiToolsBashRoute
+  ApiToolsEditRoute: typeof ApiToolsEditRoute
+  ApiToolsMultiEditRoute: typeof ApiToolsMultiEditRoute
+  ApiToolsWriteRoute: typeof ApiToolsWriteRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -268,6 +320,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AboutMeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/tools/write': {
+      id: '/api/tools/write'
+      path: '/api/tools/write'
+      fullPath: '/api/tools/write'
+      preLoaderRoute: typeof ApiToolsWriteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/tools/multi-edit': {
+      id: '/api/tools/multi-edit'
+      path: '/api/tools/multi-edit'
+      fullPath: '/api/tools/multi-edit'
+      preLoaderRoute: typeof ApiToolsMultiEditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/tools/edit': {
+      id: '/api/tools/edit'
+      path: '/api/tools/edit'
+      fullPath: '/api/tools/edit'
+      preLoaderRoute: typeof ApiToolsEditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/tools/bash': {
+      id: '/api/tools/bash'
+      path: '/api/tools/bash'
+      fullPath: '/api/tools/bash'
+      preLoaderRoute: typeof ApiToolsBashRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -294,6 +374,10 @@ const rootRouteChildren: RootRouteChildren = {
   ExampleShowcaseRoute: ExampleShowcaseRoute,
   SignInSplatRoute: SignInSplatRoute,
   SignUpSplatRoute: SignUpSplatRoute,
+  ApiToolsBashRoute: ApiToolsBashRoute,
+  ApiToolsEditRoute: ApiToolsEditRoute,
+  ApiToolsMultiEditRoute: ApiToolsMultiEditRoute,
+  ApiToolsWriteRoute: ApiToolsWriteRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
