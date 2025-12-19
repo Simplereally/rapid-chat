@@ -10,6 +10,7 @@ import {
 	broadcastStreamingUpdate,
 	initCrossTabSync,
 } from "./cross-tab-sync";
+import { deserializeMessageParts } from "@/features/ai-chat/lib/message-serialization";
 
 // Thread streaming status for UI indicators
 export type ThreadStreamingStatus = "streaming" | "completed";
@@ -340,12 +341,20 @@ export const useChatClientStore = create<ChatStore>()(
 				// This ensures the LLM has full context of the conversation
 				if (conversationHistory && conversationHistory.length > 0) {
 					const historyAsUIMessages: UIMessage[] = conversationHistory.map(
-						(msg, index) => ({
-							id: msg.id || `history-${index}`,
-							role: msg.role,
-							parts: [{ type: "text" as const, content: msg.content }],
-							createdAt: new Date(),
-						}),
+						(msg, index) => {
+							// For assistant messages, deserialize parts to restore tool calls
+							// For user messages, keep as simple text parts
+							const parts = msg.role === "assistant"
+								? deserializeMessageParts(msg.content) as UIMessage["parts"]
+								: [{ type: "text" as const, content: msg.content }];
+
+							return {
+								id: msg.id || `history-${index}`,
+								role: msg.role,
+								parts,
+								createdAt: new Date(),
+							};
+						},
 					);
 					client.setMessagesManually(historyAsUIMessages);
 				}
