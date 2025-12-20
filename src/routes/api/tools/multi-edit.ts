@@ -8,8 +8,8 @@
  */
 
 import { createFileRoute } from "@tanstack/react-router";
-import { executeMultiEdit } from "@/tools/execution/multi-edit.server";
 import { multiEditInputSchema } from "@/tools/definitions/multi-edit";
+import { executeMultiEdit } from "@/tools/execution/multi-edit.server";
 
 export const Route = createFileRoute("/api/tools/multi-edit")({
 	server: {
@@ -22,13 +22,17 @@ export const Route = createFileRoute("/api/tools/multi-edit")({
 					if (!parsed.success) {
 						return Response.json(
 							{ error: "Invalid input", details: parsed.error.issues },
-							{ status: 400 }
+							{ status: 400 },
 						);
 					}
 
-					console.log(`[MultiEdit API] Editing file: ${parsed.data.path} (${parsed.data.edits.length} edits)`);
+					console.log(
+						`[MultiEdit API] Editing file: ${parsed.data.path} (${parsed.data.edits.length} edits)`,
+					);
 					const result = await executeMultiEdit(parsed.data);
-					console.log(`[MultiEdit API] Result: success=${result.success}, applied=${result.appliedEdits}/${result.totalEdits}`);
+					console.log(
+						`[MultiEdit API] Result: success=${result.success}, applied=${result.appliedEdits}/${result.totalEdits}`,
+					);
 
 					return Response.json(result);
 				} catch (error) {
@@ -37,9 +41,12 @@ export const Route = createFileRoute("/api/tools/multi-edit")({
 						{
 							success: false,
 							path: "",
-							error: error instanceof Error ? error.message : "Internal server error",
+							error:
+								error instanceof Error
+									? error.message
+									: "Internal server error",
 						},
-						{ status: 500 }
+						{ status: 500 },
 					);
 				}
 			},

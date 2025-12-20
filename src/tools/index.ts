@@ -23,74 +23,63 @@
 // =============================================================================
 
 export {
-	bashToolDef,
-	bashInputSchema,
-	bashOutputSchema,
 	type BashInput,
 	type BashOutput,
+	bashInputSchema,
+	bashOutputSchema,
+	bashToolDef,
 } from "./definitions/bash";
-
 export {
-	writeToolDef,
-	writeInputSchema,
-	writeOutputSchema,
-	type WriteInput,
-	type WriteOutput,
-} from "./definitions/write";
-
-export {
-	editToolDef,
-	editInputSchema,
-	editOutputSchema,
 	type EditInput,
 	type EditOutput,
+	editInputSchema,
+	editOutputSchema,
+	editToolDef,
 } from "./definitions/edit";
-
 export {
-	multiEditToolDef,
-	multiEditInputSchema,
-	multiEditOutputSchema,
 	type MultiEditInput,
 	type MultiEditOutput,
+	multiEditInputSchema,
+	multiEditOutputSchema,
+	multiEditToolDef,
 } from "./definitions/multi-edit";
+export {
+	type WriteInput,
+	type WriteOutput,
+	writeInputSchema,
+	writeOutputSchema,
+	writeToolDef,
+} from "./definitions/write";
 
 // =============================================================================
 // CLIENT TOOLS (for ChatClient registration - browser-side execution)
 // =============================================================================
 
 export { bashToolClient } from "./client/bash.client";
-export { writeToolClient } from "./client/write.client";
 export { editToolClient } from "./client/edit.client";
 export { multiEditToolClient } from "./client/multi-edit.client";
+export { writeToolClient } from "./client/write.client";
 
 // =============================================================================
 // SAFE TOOLS (auto-execute, no approval needed)
 // These keep the full Tool structure with execute function
 // =============================================================================
 
-// Read - Read files (text, images, PDFs)
-export { readTool } from "./read";
-export type { ReadInput, ReadOutput } from "./read";
-export { readInputSchema, readOutputSchema } from "./read";
-
-// Glob - Find files by pattern
-export { globTool } from "./glob";
 export type { GlobInput, GlobOutput } from "./glob";
-export { globInputSchema, globOutputSchema } from "./glob";
-
-// Grep - Search file contents by regex
-export { grepTool } from "./grep";
+// Glob - Find files by pattern
+export { globInputSchema, globOutputSchema, globTool } from "./glob";
 export type { GrepInput, GrepOutput } from "./grep";
-export { grepInputSchema, grepOutputSchema } from "./grep";
-
-// LS - List directory contents
-export { lsTool } from "./ls";
+// Grep - Search file contents by regex
+export { grepInputSchema, grepOutputSchema, grepTool } from "./grep";
 export type { LsInput, LsOutput } from "./ls";
-export { lsInputSchema, lsOutputSchema } from "./ls";
-
+// LS - List directory contents
+export { lsInputSchema, lsOutputSchema, lsTool } from "./ls";
+export type { ReadInput, ReadOutput } from "./read";
+// Read - Read files (text, images, PDFs)
+export { readInputSchema, readOutputSchema, readTool } from "./read";
+export type { WebSearchInput, WebSearchOutput } from "./web-search";
 // Web Search - Search the web for information
 export { webSearchTool } from "./web-search";
-export type { WebSearchInput, WebSearchOutput } from "./web-search";
 
 // =============================================================================
 // UTILITIES
@@ -102,25 +91,23 @@ export { resolveSafePath } from "./file-utils";
 // TOOL COLLECTIONS
 // =============================================================================
 
-import { readTool } from "./read";
+import {
+	bashToolClient,
+	editToolClient,
+	multiEditToolClient,
+	writeToolClient,
+} from "./client";
+import {
+	bashToolDef,
+	editToolDef,
+	multiEditToolDef,
+	writeToolDef,
+} from "./definitions";
 import { globTool } from "./glob";
 import { grepTool } from "./grep";
 import { lsTool } from "./ls";
+import { readTool } from "./read";
 import { webSearchTool } from "./web-search";
-
-import {
-	bashToolDef,
-	writeToolDef,
-	editToolDef,
-	multiEditToolDef,
-} from "./definitions";
-
-import {
-	bashToolClient,
-	writeToolClient,
-	editToolClient,
-	multiEditToolClient,
-} from "./client";
 
 /**
  * Safe tools that don't require user approval (read-only operations)
@@ -149,10 +136,7 @@ export const approvalToolDefs = [
  * All tool definitions for server chat() call
  * Mix of safe tools (full Tool with execute) and definitions (no execute)
  */
-export const allServerTools = [
-	...safeTools,
-	...approvalToolDefs,
-] as const;
+export const allServerTools = [...safeTools, ...approvalToolDefs] as const;
 
 /**
  * Client tools for ChatClient registration
@@ -167,7 +151,6 @@ export const clientTools = [
 
 export * from "./types";
 
-
 // =============================================================================
 // LEGACY EXPORTS (for backward compatibility during migration)
 // These re-export the old tool structures - can be removed after full migration
@@ -176,6 +159,6 @@ export * from "./types";
 // Legacy full tool exports - kept for backward compatibility
 // These are the original tools with execute functions bundled
 export { bashTool } from "./bash";
-export { writeTool } from "./write";
 export { editTool } from "./edit";
 export { multiEditTool } from "./multi-edit";
+export { writeTool } from "./write";

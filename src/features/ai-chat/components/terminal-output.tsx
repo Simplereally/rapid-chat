@@ -1,7 +1,15 @@
+import {
+	Check,
+	CheckCircle,
+	Clock,
+	Loader2,
+	Terminal,
+	X,
+	XCircle,
+} from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Check, CheckCircle, Clock, Loader2, Terminal, X, XCircle } from "lucide-react";
-import { useState } from "react";
 
 interface TerminalOutputProps {
 	command: string;
@@ -34,14 +42,15 @@ export function TerminalOutput({
 	onDeny,
 }: TerminalOutputProps) {
 	const [isExpanded, setIsExpanded] = useState(true);
-	
+
 	const hasOutput = output && (output.stdout || output.stderr);
-	const showExpandButton = hasOutput && (output.stdout.length > 200 || output.stderr.length > 100);
+	const showExpandButton =
+		hasOutput && (output.stdout.length > 200 || output.stderr.length > 100);
 
 	return (
 		<div className="my-2 rounded-lg border border-border bg-zinc-900 font-mono text-sm overflow-hidden">
 			{/* Terminal header */}
-			<div 
+			<div
 				className={cn(
 					"flex items-center gap-2 px-3 py-2 border-b border-border/50",
 					isApprovalRequired && "bg-warning/10",
@@ -66,14 +75,12 @@ export function TerminalOutput({
 				{output && !output.success && (
 					<XCircle className="h-4 w-4 text-red-500 shrink-0" />
 				)}
-				
+
 				<Terminal className="h-4 w-4 text-muted-foreground shrink-0" />
-				
+
 				{/* Command */}
-				<code className="text-zinc-300 truncate flex-1">
-					$ {command}
-				</code>
-				
+				<code className="text-zinc-300 truncate flex-1">$ {command}</code>
+
 				{/* Execution time / status */}
 				{output && (
 					<span className="text-xs text-muted-foreground shrink-0">
@@ -86,7 +93,7 @@ export function TerminalOutput({
 						)}
 					</span>
 				)}
-				
+
 				{/* Expand/collapse indicator */}
 				{showExpandButton && (
 					<span className="text-xs text-muted-foreground">
@@ -104,19 +111,21 @@ export function TerminalOutput({
 							{output.stdout}
 						</pre>
 					)}
-					
+
 					{/* stderr - show in red/orange */}
 					{output.stderr && (
-						<pre className={cn(
-							"whitespace-pre-wrap break-all text-xs leading-relaxed mt-2",
-							output.success ? "text-yellow-400" : "text-red-400"
-						)}>
+						<pre
+							className={cn(
+								"whitespace-pre-wrap break-all text-xs leading-relaxed mt-2",
+								output.success ? "text-yellow-400" : "text-red-400",
+							)}
+						>
 							{output.stderr}
 						</pre>
 					)}
 				</div>
 			)}
-			
+
 			{/* Waiting for approval state - with action buttons */}
 			{isApprovalRequired && !output && (
 				<div className="px-3 py-3 space-y-3">
@@ -133,18 +142,14 @@ export function TerminalOutput({
 							<X className="h-3.5 w-3.5" />
 							Deny
 						</Button>
-						<Button
-							size="sm"
-							onClick={onApprove}
-							className="flex-1 gap-1.5"
-						>
+						<Button size="sm" onClick={onApprove} className="flex-1 gap-1.5">
 							<Check className="h-3.5 w-3.5" />
 							Run
 						</Button>
 					</div>
 				</div>
 			)}
-			
+
 			{/* Executing state */}
 			{isExecuting && !output && (
 				<div className="px-3 py-2 text-primary/80 text-xs italic flex items-center gap-2">
@@ -154,4 +159,3 @@ export function TerminalOutput({
 		</div>
 	);
 }
-

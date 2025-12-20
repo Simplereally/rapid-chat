@@ -1,5 +1,5 @@
+import type { ToolCallPart, UIMessage } from "@tanstack/ai-client";
 import { useCallback, useMemo } from "react";
-import type { UIMessage, ToolCallPart } from "@tanstack/ai-client";
 
 /**
  * Pending approval request extracted from messages
@@ -20,7 +20,10 @@ export interface PendingApproval {
  */
 export function useToolApprovals(
 	messages: UIMessage[],
-	addToolApprovalResponse: (response: { id: string; approved: boolean }) => Promise<void>,
+	addToolApprovalResponse: (response: {
+		id: string;
+		approved: boolean;
+	}) => Promise<void>,
 ) {
 	/**
 	 * Extract all pending approval requests from current messages

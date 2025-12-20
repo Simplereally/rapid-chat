@@ -6,8 +6,11 @@
  */
 
 import * as fs from "node:fs/promises";
+import type {
+	MultiEditInput,
+	MultiEditOutput,
+} from "../definitions/multi-edit";
 import { resolveSafePath } from "../file-utils";
-import type { MultiEditInput, MultiEditOutput } from "../definitions/multi-edit";
 
 /**
  * Truncate long strings for display in results
@@ -22,7 +25,9 @@ function truncateForDisplay(text: string, maxLength = 50): string {
  * This is the server-side implementation called from the tool execution API.
  * Operations are atomic - if any edit fails, no changes are made.
  */
-export async function executeMultiEdit(input: MultiEditInput): Promise<MultiEditOutput> {
+export async function executeMultiEdit(
+	input: MultiEditInput,
+): Promise<MultiEditOutput> {
 	const { edits, dryRun = false } = input;
 	const resolvedPath = resolveSafePath(input.path);
 
@@ -43,10 +48,11 @@ export async function executeMultiEdit(input: MultiEditInput): Promise<MultiEdit
 					index: i,
 					success: false,
 					oldText: truncateForDisplay(oldText),
-					message: `Could not find text to replace. ` +
+					message:
+						`Could not find text to replace. ` +
 						`Ensure it matches exactly, including whitespace.`,
 				});
-				
+
 				// If an edit fails, abort the entire operation
 				return {
 					success: false,
@@ -55,7 +61,8 @@ export async function executeMultiEdit(input: MultiEditInput): Promise<MultiEdit
 					totalEdits: edits.length,
 					dryRun,
 					results,
-					error: `Edit ${i + 1}/${edits.length} failed: oldText not found. ` +
+					error:
+						`Edit ${i + 1}/${edits.length} failed: oldText not found. ` +
 						`No changes were made to the file.`,
 				};
 			}
@@ -67,7 +74,8 @@ export async function executeMultiEdit(input: MultiEditInput): Promise<MultiEdit
 					index: i,
 					success: false,
 					oldText: truncateForDisplay(oldText),
-					message: `Found ${occurrences} occurrences of oldText. ` +
+					message:
+						`Found ${occurrences} occurrences of oldText. ` +
 						`Each oldText must be unique to avoid ambiguous replacements.`,
 				});
 
@@ -78,7 +86,8 @@ export async function executeMultiEdit(input: MultiEditInput): Promise<MultiEdit
 					totalEdits: edits.length,
 					dryRun,
 					results,
-					error: `Edit ${i + 1}/${edits.length} failed: ambiguous match (${occurrences} occurrences). ` +
+					error:
+						`Edit ${i + 1}/${edits.length} failed: ambiguous match (${occurrences} occurrences). ` +
 						`No changes were made to the file.`,
 				};
 			}

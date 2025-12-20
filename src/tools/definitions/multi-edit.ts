@@ -20,15 +20,11 @@ const editOperationSchema = z.object({
 			"The exact text to find and replace. " +
 				"Must match exactly, including whitespace and indentation.",
 		),
-	newText: z
-		.string()
-		.describe("The replacement text for this edit."),
+	newText: z.string().describe("The replacement text for this edit."),
 });
 
 export const multiEditInputSchema = z.object({
-	path: z
-		.string()
-		.describe("The file path to edit. Must be an existing file."),
+	path: z.string().describe("The file path to edit. Must be an existing file."),
 	edits: z
 		.array(editOperationSchema)
 		.min(1)
@@ -54,10 +50,7 @@ export const multiEditOutputSchema = z.object({
 		.number()
 		.optional()
 		.describe("Number of edits successfully applied"),
-	totalEdits: z
-		.number()
-		.optional()
-		.describe("Total number of edits requested"),
+	totalEdits: z.number().optional().describe("Total number of edits requested"),
 	dryRun: z
 		.boolean()
 		.optional()

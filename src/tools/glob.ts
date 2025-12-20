@@ -1,7 +1,7 @@
-import type { Tool } from "@tanstack/ai";
-import { z } from "zod";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import type { Tool } from "@tanstack/ai";
+import { z } from "zod";
 
 // =============================================================================
 // GLOB TOOL - Find files by pattern
@@ -184,7 +184,10 @@ async function findInDirectory(
 			const isDirectory = entry.isDirectory();
 
 			// Check if name matches pattern
-			if (matchesGlob(entry.name, [pattern]) || matchesGlob(relativePath, [pattern])) {
+			if (
+				matchesGlob(entry.name, [pattern]) ||
+				matchesGlob(relativePath, [pattern])
+			) {
 				// Check type filter
 				const typeMatches =
 					options.type === "any" ||
@@ -296,7 +299,11 @@ async function executeGlob(input: GlobInput): Promise<GlobOutput> {
  * Safe read-only operation - no approval required.
  * Use this to locate files before reading or editing them.
  */
-export const globTool: Tool<typeof globInputSchema, typeof globOutputSchema, "glob"> = {
+export const globTool: Tool<
+	typeof globInputSchema,
+	typeof globOutputSchema,
+	"glob"
+> = {
 	name: "glob",
 	description:
 		"Find files and directories by glob pattern. " +

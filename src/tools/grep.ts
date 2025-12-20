@@ -1,7 +1,7 @@
-import type { Tool } from "@tanstack/ai";
-import { z } from "zod";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import type { Tool } from "@tanstack/ai";
+import { z } from "zod";
 
 // =============================================================================
 // GREP TOOL - Search file contents by regex
@@ -34,9 +34,7 @@ const grepInputSchema = z.object({
 		.boolean()
 		.optional()
 		.default(true)
-		.describe(
-			"If true (default), performs case-insensitive search.",
-		),
+		.describe("If true (default), performs case-insensitive search."),
 	includePatterns: z
 		.array(z.string())
 		.optional()
@@ -115,11 +113,29 @@ const DEFAULT_EXCLUDES = [
  * Binary file extensions to skip
  */
 const BINARY_EXTENSIONS = new Set([
-	".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".svg",
-	".woff", ".woff2", ".ttf", ".eot",
-	".pdf", ".zip", ".tar", ".gz",
-	".mp3", ".mp4", ".wav", ".webm",
-	".exe", ".dll", ".so", ".dylib",
+	".png",
+	".jpg",
+	".jpeg",
+	".gif",
+	".webp",
+	".ico",
+	".svg",
+	".woff",
+	".woff2",
+	".ttf",
+	".eot",
+	".pdf",
+	".zip",
+	".tar",
+	".gz",
+	".mp3",
+	".mp4",
+	".wav",
+	".webm",
+	".exe",
+	".dll",
+	".so",
+	".dylib",
 ]);
 
 /**
@@ -343,7 +359,11 @@ async function executeGrep(input: GrepInput): Promise<GrepOutput> {
  * Safe read-only operation - no approval required.
  * Use this to find specific content before reading or editing files.
  */
-export const grepTool: Tool<typeof grepInputSchema, typeof grepOutputSchema, "grep"> = {
+export const grepTool: Tool<
+	typeof grepInputSchema,
+	typeof grepOutputSchema,
+	"grep"
+> = {
 	name: "grep",
 	description:
 		"Search for text patterns or code within files. " +

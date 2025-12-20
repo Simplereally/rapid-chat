@@ -1,6 +1,6 @@
+import * as fs from "node:fs/promises";
 import type { Tool } from "@tanstack/ai";
 import { z } from "zod";
-import * as fs from "node:fs/promises";
 import { resolveSafePath } from "./file-utils";
 
 // =============================================================================
@@ -130,7 +130,7 @@ async function executeRead(input: ReadInput): Promise<ReadOutput> {
 		const totalLines = lines.length;
 
 		// Calculate line range
-		let actualStartLine = startLine ? Math.max(1, startLine) : 1;
+		const actualStartLine = startLine ? Math.max(1, startLine) : 1;
 		let actualEndLine = endLine ? Math.min(totalLines, endLine) : totalLines;
 
 		// Apply maxLines limit if specified
@@ -143,7 +143,8 @@ async function executeRead(input: ReadInput): Promise<ReadOutput> {
 		const resultContent = requestedLines.join("\n");
 
 		const wasTruncated =
-			actualEndLine < totalLines || (maxLines !== undefined && totalLines > maxLines);
+			actualEndLine < totalLines ||
+			(maxLines !== undefined && totalLines > maxLines);
 
 		return {
 			success: true,
@@ -171,7 +172,11 @@ async function executeRead(input: ReadInput): Promise<ReadOutput> {
  * Safe read-only operation - no approval required.
  * Supports line-range reading for large files.
  */
-export const readTool: Tool<typeof readInputSchema, typeof readOutputSchema, "read"> = {
+export const readTool: Tool<
+	typeof readInputSchema,
+	typeof readOutputSchema,
+	"read"
+> = {
 	name: "read",
 	description:
 		"Read the contents of a file. " +

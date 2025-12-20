@@ -53,7 +53,10 @@ export async function executeBash(input: BashInput): Promise<BashOutput> {
 			stdout += data.toString();
 			// Limit stdout size to prevent memory issues
 			if (stdout.length > 1_000_000) {
-				stdout = stdout.slice(0, 500_000) + "\n...[output truncated]...\n" + stdout.slice(-500_000);
+				stdout =
+					stdout.slice(0, 500_000) +
+					"\n...[output truncated]...\n" +
+					stdout.slice(-500_000);
 			}
 		});
 
@@ -62,7 +65,10 @@ export async function executeBash(input: BashInput): Promise<BashOutput> {
 			stderr += data.toString();
 			// Limit stderr size
 			if (stderr.length > 100_000) {
-				stderr = stderr.slice(0, 50_000) + "\n...[output truncated]...\n" + stderr.slice(-50_000);
+				stderr =
+					stderr.slice(0, 50_000) +
+					"\n...[output truncated]...\n" +
+					stderr.slice(-50_000);
 			}
 		});
 

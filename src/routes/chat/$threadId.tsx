@@ -1,8 +1,14 @@
+import { useAuth } from "@clerk/tanstack-react-start";
+import type { UIMessage } from "@tanstack/ai-react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "convex/react";
+import { ArrowDown, Loader2 } from "lucide-react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
-    ChatHeader,
-    ChatInputForm,
-    useMessageActions,
+	ChatHeader,
+	ChatInputForm,
+	useMessageActions,
 } from "@/features/ai-chat";
 import { ChatHistoryList } from "@/features/ai-chat/components/chat-history-list";
 import { useChat } from "@/features/ai-chat/hooks/use-chat";
@@ -12,12 +18,6 @@ import { useChatScroll } from "@/features/ai-chat/hooks/use-chat-scroll";
 import { useParsedMessages } from "@/features/ai-chat/hooks/use-parsed-messages";
 import { deserializeMessageParts } from "@/features/ai-chat/lib/message-serialization";
 import { useChatClientStore } from "@/stores/chat-client-store";
-import { useAuth } from "@clerk/tanstack-react-start";
-import type { UIMessage } from "@tanstack/ai-react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "convex/react";
-import { ArrowDown, Loader2 } from "lucide-react";
-import { useCallback, useMemo, useRef, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 
@@ -81,9 +81,10 @@ function ChatThreadPage() {
 	);
 
 	// 4. TanStack AI Chat State
-	const { isLoading, stop, append, isTokenLoaded, addToolApprovalResponse } = useChat({
-		threadId,
-	});
+	const { isLoading, stop, append, isTokenLoaded, addToolApprovalResponse } =
+		useChat({
+			threadId,
+		});
 
 	// 5. Merge Convex (persisted) + Zustand (streaming) messages for display
 	// User messages: Only from Convex (single source of truth)
@@ -95,9 +96,10 @@ function ChatThreadPage() {
 		// For assistant messages, deserialize parts to restore tool calls
 		const persistedMessages = convexMessages.map((msg) => {
 			// Deserialize message parts (handles both old text-only format and new format with tool calls)
-			const parts = msg.role === "assistant"
-				? deserializeMessageParts(msg.content)
-				: [{ type: "text" as const, content: msg.content }];
+			const parts =
+				msg.role === "assistant"
+					? deserializeMessageParts(msg.content)
+					: [{ type: "text" as const, content: msg.content }];
 
 			return {
 				id: msg._id,
@@ -242,8 +244,12 @@ function ChatThreadPage() {
 				regenerateResponse={activeMessageActions.regenerateResponse}
 				getDisplayContent={activeMessageActions.getDisplayContent}
 				// Tool approval callbacks
-				onApproveToolCall={(approvalId) => addToolApprovalResponse({ id: approvalId, approved: true })}
-				onDenyToolCall={(approvalId) => addToolApprovalResponse({ id: approvalId, approved: false })}
+				onApproveToolCall={(approvalId) =>
+					addToolApprovalResponse({ id: approvalId, approved: true })
+				}
+				onDenyToolCall={(approvalId) =>
+					addToolApprovalResponse({ id: approvalId, approved: false })
+				}
 			/>
 
 			<div className="relative shrink-0 border-t border-border bg-background px-4 pt-2 pb-4">

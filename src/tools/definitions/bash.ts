@@ -35,11 +35,18 @@ export const bashInputSchema = z.object({
 });
 
 export const bashOutputSchema = z.object({
-	success: z.boolean().describe("Whether the command executed successfully (exit code 0)"),
-	exitCode: z.number().nullable().describe("Command exit code, null if killed by timeout"),
+	success: z
+		.boolean()
+		.describe("Whether the command executed successfully (exit code 0)"),
+	exitCode: z
+		.number()
+		.nullable()
+		.describe("Command exit code, null if killed by timeout"),
 	stdout: z.string().describe("Standard output from the command"),
 	stderr: z.string().describe("Standard error output from the command"),
-	timedOut: z.boolean().describe("Whether the command was killed due to timeout"),
+	timedOut: z
+		.boolean()
+		.describe("Whether the command was killed due to timeout"),
 	executionTime: z.number().describe("Execution time in milliseconds"),
 });
 

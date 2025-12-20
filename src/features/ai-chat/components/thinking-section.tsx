@@ -1,11 +1,11 @@
-import { Button } from "@/components/ui/button";
-import {
-    Collapsible,
-    CollapsibleContent,
-    CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { Brain, ChevronDown, ChevronUp } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+	Collapsible,
+	CollapsibleContent,
+	CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 interface ThinkingSectionProps {
 	content: string;
@@ -15,7 +15,7 @@ interface ThinkingSectionProps {
 /**
  * Component to display collapsible thinking/reasoning content.
  * Uses Shadcn Collapsible for proper accessibility and animation.
- * 
+ *
  * Behavior:
  * - Starts EXPANDED when streaming reasoning (isThinking=true)
  * - Auto-collapses when reasoning finishes (isThinking transitions false)
@@ -30,7 +30,11 @@ export function ThinkingSection({ content, isThinking }: ThinkingSectionProps) {
 
 	// Handle transition from thinking -> done (auto-collapse when reasoning finishes)
 	useEffect(() => {
-		if (prevThinkingRef.current && !isThinking && !hasAutoCollapsedRef.current) {
+		if (
+			prevThinkingRef.current &&
+			!isThinking &&
+			!hasAutoCollapsedRef.current
+		) {
 			// Reasoning just finished: Collapse automatically
 			setIsOpen(false);
 			hasAutoCollapsedRef.current = true;

@@ -1,9 +1,9 @@
+import { create } from "zustand";
+import { devtools } from "zustand/middleware";
 import {
 	checkOllamaStatus,
 	startOllama,
 } from "@/features/ollama/ollama-server";
-import { create } from "zustand";
-import { devtools } from "zustand/middleware";
 
 export type OllamaStatus = "checking" | "running" | "stopped" | "not-installed";
 

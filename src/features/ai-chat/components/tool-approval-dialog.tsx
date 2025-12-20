@@ -9,8 +9,8 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ToolApprovalDialogProps {
 	isOpen: boolean;
@@ -178,7 +178,8 @@ function getApprovalDetails(
 			const path = String(args.path ?? "unknown");
 			const destination = args.destination ? String(args.destination) : null;
 			const contentPreview = args.content
-				? String(args.content).slice(0, 100) + (String(args.content).length > 100 ? "..." : "")
+				? String(args.content).slice(0, 100) +
+					(String(args.content).length > 100 ? "..." : "")
 				: null;
 
 			const operationLabels: Record<string, string> = {
@@ -213,7 +214,9 @@ function getApprovalDetails(
 
 			return {
 				title: operationLabels[operation] ?? "File Operation",
-				description: operationDescriptions[operation] ?? "This operation will modify the filesystem.",
+				description:
+					operationDescriptions[operation] ??
+					"This operation will modify the filesystem.",
 				details,
 			};
 		}

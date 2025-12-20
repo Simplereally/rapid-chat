@@ -1,6 +1,6 @@
+import * as fs from "node:fs/promises";
 import type { Tool } from "@tanstack/ai";
 import { z } from "zod";
-import * as fs from "node:fs/promises";
 import { resolveSafePath } from "./file-utils";
 
 // =============================================================================
@@ -14,15 +14,11 @@ const editOperationSchema = z.object({
 			"The exact text to find and replace. " +
 				"Must match exactly, including whitespace and indentation.",
 		),
-	newText: z
-		.string()
-		.describe("The replacement text for this edit."),
+	newText: z.string().describe("The replacement text for this edit."),
 });
 
 const multiEditInputSchema = z.object({
-	path: z
-		.string()
-		.describe("The file path to edit. Must be an existing file."),
+	path: z.string().describe("The file path to edit. Must be an existing file."),
 	edits: z
 		.array(editOperationSchema)
 		.min(1)
@@ -48,10 +44,7 @@ const multiEditOutputSchema = z.object({
 		.number()
 		.optional()
 		.describe("Number of edits successfully applied"),
-	totalEdits: z
-		.number()
-		.optional()
-		.describe("Total number of edits requested"),
+	totalEdits: z.number().optional().describe("Total number of edits requested"),
 	dryRun: z
 		.boolean()
 		.optional()
@@ -77,7 +70,9 @@ type MultiEditOutput = z.infer<typeof multiEditOutputSchema>;
 /**
  * Execute multiple edit operations on a single file
  */
-async function executeMultiEdit(input: MultiEditInput): Promise<MultiEditOutput> {
+async function executeMultiEdit(
+	input: MultiEditInput,
+): Promise<MultiEditOutput> {
 	const { edits, dryRun } = input;
 	const resolvedPath = resolveSafePath(input.path);
 
@@ -98,10 +93,11 @@ async function executeMultiEdit(input: MultiEditInput): Promise<MultiEditOutput>
 					index: i,
 					success: false,
 					oldText: truncateForDisplay(oldText),
-					message: `Could not find text to replace. ` +
+					message:
+						`Could not find text to replace. ` +
 						`Ensure it matches exactly, including whitespace.`,
 				});
-				
+
 				// If an edit fails, abort the entire operation
 				return {
 					success: false,
@@ -110,7 +106,8 @@ async function executeMultiEdit(input: MultiEditInput): Promise<MultiEditOutput>
 					totalEdits: edits.length,
 					dryRun,
 					results,
-					error: `Edit ${i + 1}/${edits.length} failed: oldText not found. ` +
+					error:
+						`Edit ${i + 1}/${edits.length} failed: oldText not found. ` +
 						`No changes were made to the file.`,
 				};
 			}
@@ -122,7 +119,8 @@ async function executeMultiEdit(input: MultiEditInput): Promise<MultiEditOutput>
 					index: i,
 					success: false,
 					oldText: truncateForDisplay(oldText),
-					message: `Found ${occurrences} occurrences of oldText. ` +
+					message:
+						`Found ${occurrences} occurrences of oldText. ` +
 						`Each oldText must be unique to avoid ambiguous replacements.`,
 				});
 
@@ -133,7 +131,8 @@ async function executeMultiEdit(input: MultiEditInput): Promise<MultiEditOutput>
 					totalEdits: edits.length,
 					dryRun,
 					results,
-					error: `Edit ${i + 1}/${edits.length} failed: ambiguous match (${occurrences} occurrences). ` +
+					error:
+						`Edit ${i + 1}/${edits.length} failed: ambiguous match (${occurrences} occurrences). ` +
 						`No changes were made to the file.`,
 				};
 			}

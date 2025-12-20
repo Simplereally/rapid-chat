@@ -5,29 +5,35 @@
  * This runs in the browser and communicates with /api/tools/bash.
  */
 
-import { bashToolDef, type BashInput, type BashOutput } from "../definitions/bash";
+import {
+	type BashInput,
+	type BashOutput,
+	bashToolDef,
+} from "../definitions/bash";
 
 /**
  * Client-side bash tool.
  * After approval, this calls the server-side execution API.
  */
-export const bashToolClient = bashToolDef.client(async (args: BashInput): Promise<BashOutput> => {
-	const response = await fetch("/api/tools/bash", {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify(args),
-	});
+export const bashToolClient = bashToolDef.client(
+	async (args: BashInput): Promise<BashOutput> => {
+		const response = await fetch("/api/tools/bash", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(args),
+		});
 
-	if (!response.ok) {
-		return {
-			success: false,
-			exitCode: null,
-			stdout: "",
-			stderr: `API error: ${response.status} ${response.statusText}`,
-			timedOut: false,
-			executionTime: 0,
-		};
-	}
+		if (!response.ok) {
+			return {
+				success: false,
+				exitCode: null,
+				stdout: "",
+				stderr: `API error: ${response.status} ${response.statusText}`,
+				timedOut: false,
+				executionTime: 0,
+			};
+		}
 
-	return response.json();
-});
+		return response.json();
+	},
+);

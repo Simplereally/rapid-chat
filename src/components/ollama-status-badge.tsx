@@ -1,3 +1,15 @@
+import { motion } from "framer-motion";
+import {
+	Activity,
+	AlertCircle,
+	CheckCircle2,
+	Download,
+	ExternalLink,
+	Power,
+	RefreshCw,
+	Settings,
+} from "lucide-react";
+import { useEffect } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,18 +23,6 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { useOllamaStore } from "@/stores/ollama-store";
-import { motion } from "framer-motion";
-import {
-	Activity,
-	AlertCircle,
-	CheckCircle2,
-	Download,
-	ExternalLink,
-	Power,
-	RefreshCw,
-	Settings,
-} from "lucide-react";
-import { useEffect } from "react";
 
 /**
  * Status badge for Ollama with polling and start capability.
@@ -132,7 +132,7 @@ export function OllamaStatusBadge() {
 							</p>
 						</div>
 					</div>
-				<Separator className="opacity-50" />
+					<Separator className="opacity-50" />
 					{status === "running" && (
 						<div className="space-y-2.5 pt-1">
 							<div className="flex items-center justify-between">

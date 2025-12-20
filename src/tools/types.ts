@@ -1,6 +1,6 @@
 /**
  * AI Tool Shared Types
- * 
+ *
  * Tool names and other common types that are safe for both client and server.
  */
 

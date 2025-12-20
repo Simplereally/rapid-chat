@@ -1,7 +1,7 @@
-import { useChatClientStore } from "@/stores/chat-client-store";
 import type { UIMessage } from "@tanstack/ai-react";
 import { useMutation } from "convex/react";
 import { useCallback, useRef } from "react";
+import { useChatClientStore } from "@/stores/chat-client-store";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import { serializeMessageParts } from "../lib/message-serialization";
@@ -79,7 +79,11 @@ export function useChatActions({
 				// Serialize all message parts including tool calls for Convex storage
 				// This preserves tool call information so it survives page reloads
 				const content = serializeMessageParts(
-					message.parts as Array<{ type: string; content?: string; [key: string]: unknown }>,
+					message.parts as Array<{
+						type: string;
+						content?: string;
+						[key: string]: unknown;
+					}>,
 				);
 
 				// Convex handles retries automatically

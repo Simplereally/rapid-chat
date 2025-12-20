@@ -1,7 +1,7 @@
-import type { Tool } from "@tanstack/ai";
-import { z } from "zod";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import type { Tool } from "@tanstack/ai";
+import { z } from "zod";
 import { resolveSafePath } from "./file-utils";
 
 // =============================================================================
@@ -105,7 +105,11 @@ async function executeWrite(input: WriteInput): Promise<WriteOutput> {
  *
  * ⚠️ REQUIRES USER APPROVAL - This tool modifies the filesystem.
  */
-export const writeTool: Tool<typeof writeInputSchema, typeof writeOutputSchema, "write"> = {
+export const writeTool: Tool<
+	typeof writeInputSchema,
+	typeof writeOutputSchema,
+	"write"
+> = {
 	name: "write",
 	description:
 		"Create a new file or overwrite an existing file with the provided content. " +

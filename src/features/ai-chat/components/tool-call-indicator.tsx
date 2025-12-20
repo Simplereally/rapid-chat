@@ -1,19 +1,19 @@
+import {
+	AlertTriangle,
+	CheckCircle2,
+	Edit,
+	Edit2,
+	FileText,
+	FolderOpen,
+	FolderSearch,
+	Globe,
+	List,
+	Loader2,
+	Search,
+	Terminal,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ToolName } from "@/tools/client-index";
-import {
-    AlertTriangle,
-    CheckCircle2,
-    Edit,
-    Edit2,
-    FileText,
-    FolderOpen,
-    FolderSearch,
-    Globe,
-    List,
-    Loader2,
-    Search,
-    Terminal
-} from "lucide-react";
 
 interface ToolCallIndicatorProps {
 	toolName: ToolName | "generating";
@@ -29,23 +29,49 @@ interface ToolCallIndicatorProps {
  *
  * For tools requiring approval, shows a warning state.
  */
-export function ToolCallIndicator({ toolName, args, state, output }: ToolCallIndicatorProps) {
+export function ToolCallIndicator({
+	toolName,
+	args,
+	state,
+	output,
+}: ToolCallIndicatorProps) {
 	// Format the display text based on tool name
 	const displayText = getToolDisplayText(toolName, args, state, output);
 	const isApprovalRequired = state === "approval-requested";
 	const isFinished = output !== undefined;
 	const Icon = getToolIcon(toolName);
-	const StatusIcon = isFinished ? CheckCircle2 : (isApprovalRequired ? AlertTriangle : Loader2);
+	const StatusIcon = isFinished
+		? CheckCircle2
+		: isApprovalRequired
+			? AlertTriangle
+			: Loader2;
 
 	const showStatusIcon = toolName !== "generating";
 
 	return (
-		<div className={cn(
-			"flex items-center gap-2 text-sm py-1 transition-colors duration-200",
-			isApprovalRequired ? 'text-warning' : isFinished ? 'text-green-500/80' : 'text-muted-foreground/60'
-		)}>
-			{showStatusIcon && <StatusIcon className={cn("h-3 w-3", !isFinished && !isApprovalRequired && "animate-spin")} />}
-			{Icon && <Icon className={cn("h-3 w-3", toolName === "generating" && "animate-spin")} />}
+		<div
+			className={cn(
+				"flex items-center gap-2 text-sm py-1 transition-colors duration-200",
+				isApprovalRequired
+					? "text-warning"
+					: isFinished
+						? "text-green-500/80"
+						: "text-muted-foreground/60",
+			)}
+		>
+			{showStatusIcon && (
+				<StatusIcon
+					className={cn(
+						"h-3 w-3",
+						!isFinished && !isApprovalRequired && "animate-spin",
+					)}
+				/>
+			)}
+			{Icon && (
+				<Icon
+					className={cn("h-3 w-3", toolName === "generating" && "animate-spin")}
+				/>
+			)}
 			<span className="italic">{displayText}</span>
 		</div>
 	);
@@ -64,7 +90,7 @@ function getToolIcon(toolName: ToolName | "generating") {
 			return FolderSearch;
 		case "ls":
 			return List;
-		
+
 		// Direct file IO
 		case "read":
 			return FileText;
@@ -74,15 +100,15 @@ function getToolIcon(toolName: ToolName | "generating") {
 			return Edit;
 		case "multi_edit":
 			return Edit2;
-		
+
 		// Shell / Terminal
 		case "bash":
 			return Terminal;
-		
+
 		// External
 		case "web_search":
 			return Globe;
-		
+
 		default:
 			return null;
 	}
@@ -120,130 +146,156 @@ function getToolDisplayText(
 		// ===================
 		// Search / Discovery
 		// ===================
-		
+
 		case "grep": {
-			const pattern = typeof args.pattern === "string" ? args.pattern : (typeof args.query === "string" ? args.query : "");
-			const path = typeof args.path === "string" ? args.path : (typeof args.searchPath === "string" ? args.searchPath : ".");
-			const shortPattern = pattern.length > 30 ? pattern.slice(0, 27) + "..." : pattern;
+			const pattern =
+				typeof args.pattern === "string"
+					? args.pattern
+					: typeof args.query === "string"
+						? args.query
+						: "";
+			const path =
+				typeof args.path === "string"
+					? args.path
+					: typeof args.searchPath === "string"
+						? args.searchPath
+						: ".";
+			const shortPattern =
+				pattern.length > 30 ? pattern.slice(0, 27) + "..." : pattern;
 			const shortPath = path.length > 20 ? "..." + path.slice(-17) : path;
-			
+
 			if (isFinished) {
 				const count = parsedOutput?.totalMatches ?? 0;
-				return `${count} match${count === 1 ? '' : 'es'} found for "${shortPattern}"`;
+				return `${count} match${count === 1 ? "" : "es"} found for "${shortPattern}"`;
 			}
-			
+
 			return pattern
 				? `Searching for "${shortPattern}" in ${shortPath}`
 				: "Searching files...";
 		}
-		
+
 		case "glob": {
 			const pattern = typeof args.pattern === "string" ? args.pattern : "*";
-			const path = typeof args.path === "string" ? args.path : (typeof args.searchPath === "string" ? args.searchPath : ".");
+			const path =
+				typeof args.path === "string"
+					? args.path
+					: typeof args.searchPath === "string"
+						? args.searchPath
+						: ".";
 			const shortPath = path.length > 20 ? "..." + path.slice(-17) : path;
-			
+
 			if (isFinished) {
 				const count = parsedOutput?.totalFound ?? 0;
 				return `${count} found: "${pattern}"`;
 			}
-			
+
 			return `Finding "${pattern}" in ${shortPath}`;
 		}
-		
+
 		case "ls": {
 			const path = typeof args.path === "string" ? args.path : ".";
 			const shortPath = path.length > 40 ? "..." + path.slice(-37) : path;
-			
+
 			if (isFinished) {
 				const count = parsedOutput?.totalItems ?? 0;
-				return `${count} item${count === 1 ? '' : 's'} in ${shortPath}`;
+				return `${count} item${count === 1 ? "" : "s"} in ${shortPath}`;
 			}
-			
+
 			return `Listing directory: ${shortPath}`;
 		}
 
 		// ===================
 		// Direct file IO
 		// ===================
-		
+
 		case "read": {
 			const path = typeof args.path === "string" ? args.path : "";
 			const shortPath = path.length > 40 ? "..." + path.slice(-37) : path;
-			
+
 			if (isFinished) {
 				if (parsedOutput?.success) {
-					const size = typeof parsedOutput?.content === 'string' ? parsedOutput.content.length : 0;
+					const size =
+						typeof parsedOutput?.content === "string"
+							? parsedOutput.content.length
+							: 0;
 					const lines = parsedOutput?.lineCount ?? 0;
 					return `Read ${lines > 0 ? `${lines} lines` : `${size} bytes`} from ${shortPath}`;
 				}
 				return `Failed to read ${shortPath}`;
 			}
-			
+
 			return `Reading: ${shortPath}`;
 		}
-		
+
 		case "write": {
 			const path = typeof args.path === "string" ? args.path : "";
 			const shortPath = path.length > 40 ? "..." + path.slice(-37) : path;
-			
+
 			if (isFinished) {
-				return parsedOutput?.success ? `Wrote to ${shortPath}` : `Failed to write ${shortPath}`;
+				return parsedOutput?.success
+					? `Wrote to ${shortPath}`
+					: `Failed to write ${shortPath}`;
 			}
-			
+
 			return `Writing: ${shortPath}`;
 		}
-		
+
 		case "edit": {
 			const path = typeof args.path === "string" ? args.path : "";
 			const shortPath = path.length > 40 ? "..." + path.slice(-37) : path;
-			
+
 			if (isFinished) {
-				return parsedOutput?.success ? `Updated ${shortPath}` : `Failed to edit ${shortPath}`;
+				return parsedOutput?.success
+					? `Updated ${shortPath}`
+					: `Failed to edit ${shortPath}`;
 			}
-			
+
 			return `Editing: ${shortPath}`;
 		}
-		
+
 		case "multi_edit": {
 			const path = typeof args.path === "string" ? args.path : "";
 			const shortPath = path.length > 40 ? "..." + path.slice(-37) : path;
-			
+
 			if (isFinished) {
-				return parsedOutput?.success ? `Applied batch edits to ${shortPath}` : `Failed batch edit on ${shortPath}`;
+				return parsedOutput?.success
+					? `Applied batch edits to ${shortPath}`
+					: `Failed batch edit on ${shortPath}`;
 			}
-			
+
 			return `Batch editing: ${shortPath}`;
 		}
 
 		// ===================
 		// Shell / Terminal
 		// ===================
-		
+
 		case "bash": {
 			const command = typeof args.command === "string" ? args.command : "";
-			const shortCommand = command.length > 50 ? command.slice(0, 47) + "..." : command;
-			
+			const shortCommand =
+				command.length > 50 ? command.slice(0, 47) + "..." : command;
+
 			if (isFinished) {
-				return parsedOutput?.success ? `Ran: ${shortCommand}` : `Failed: ${shortCommand}`;
+				return parsedOutput?.success
+					? `Ran: ${shortCommand}`
+					: `Failed: ${shortCommand}`;
 			}
-			
-			return command
-				? `Running: ${shortCommand}`
-				: "Running command...";
+
+			return command ? `Running: ${shortCommand}` : "Running command...";
 		}
 
 		// ===================
 		// External
 		// ===================
-		
+
 		case "web_search": {
 			const query = typeof args.query === "string" ? args.query : "";
-			
+
 			if (isFinished) {
 				const count = parsedOutput?.results?.length ?? 0;
-				return `${count} result${count === 1 ? '' : 's'} for "${query}"`;
+				return `${count} result${count === 1 ? "" : "s"} for "${query}"`;
 			}
-			
+
 			return query
 				? `Searching the web for "${query}"`
 				: "Searching the web...";
@@ -263,24 +315,26 @@ function getApprovalRequestText(
 ): string {
 	switch (toolName) {
 		case "bash": {
-			const command = typeof args.command === "string" ? args.command : "command";
-			const shortCommand = command.length > 40 ? command.slice(0, 37) + "..." : command;
+			const command =
+				typeof args.command === "string" ? args.command : "command";
+			const shortCommand =
+				command.length > 40 ? command.slice(0, 37) + "..." : command;
 			return `⚠️ Approval needed: run "${shortCommand}"`;
 		}
-		
+
 		case "write": {
 			const path = typeof args.path === "string" ? args.path : "file";
 			const shortPath = path.length > 30 ? "..." + path.slice(-27) : path;
 			return `⚠️ Approval needed: write "${shortPath}"`;
 		}
-		
+
 		case "edit":
 		case "multi_edit": {
 			const path = typeof args.path === "string" ? args.path : "file";
 			const shortPath = path.length > 30 ? "..." + path.slice(-27) : path;
 			return `⚠️ Approval needed: edit "${shortPath}"`;
 		}
-		
+
 		default:
 			return `⚠️ Approval needed for ${toolName}`;
 	}

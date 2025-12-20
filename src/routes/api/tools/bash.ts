@@ -8,8 +8,8 @@
  */
 
 import { createFileRoute } from "@tanstack/react-router";
-import { executeBash } from "@/tools/execution/bash.server";
 import { bashInputSchema } from "@/tools/definitions/bash";
+import { executeBash } from "@/tools/execution/bash.server";
 
 export const Route = createFileRoute("/api/tools/bash")({
 	server: {
@@ -22,13 +22,17 @@ export const Route = createFileRoute("/api/tools/bash")({
 					if (!parsed.success) {
 						return Response.json(
 							{ error: "Invalid input", details: parsed.error.issues },
-							{ status: 400 }
+							{ status: 400 },
 						);
 					}
 
-					console.log(`[Bash API] Executing command: ${parsed.data.command.slice(0, 50)}...`);
+					console.log(
+						`[Bash API] Executing command: ${parsed.data.command.slice(0, 50)}...`,
+					);
 					const result = await executeBash(parsed.data);
-					console.log(`[Bash API] Result: success=${result.success}, exitCode=${result.exitCode}`);
+					console.log(
+						`[Bash API] Result: success=${result.success}, exitCode=${result.exitCode}`,
+					);
 
 					return Response.json(result);
 				} catch (error) {
@@ -38,11 +42,14 @@ export const Route = createFileRoute("/api/tools/bash")({
 							success: false,
 							exitCode: null,
 							stdout: "",
-							stderr: error instanceof Error ? error.message : "Internal server error",
+							stderr:
+								error instanceof Error
+									? error.message
+									: "Internal server error",
 							timedOut: false,
 							executionTime: 0,
 						},
-						{ status: 500 }
+						{ status: 500 },
 					);
 				}
 			},

@@ -1,3 +1,5 @@
+import { AlertTriangle, Brain, Send, Square } from "lucide-react";
+import { useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -6,8 +8,6 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useIsOllamaRunning } from "@/stores/ollama-store";
-import { AlertTriangle, Brain, Send, Square } from "lucide-react";
-import { useCallback, useRef } from "react";
 
 interface ChatInputFormProps {
 	onSubmit: (content: string) => void | Promise<void>;

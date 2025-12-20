@@ -6,20 +6,20 @@
  */
 
 export { bashToolClient } from "./client/bash.client";
-export { writeToolClient } from "./client/write.client";
 export { editToolClient } from "./client/edit.client";
 export { multiEditToolClient } from "./client/multi-edit.client";
-
-export * from "./types";
-
+export { writeToolClient } from "./client/write.client";
+export type { BashInput, BashOutput } from "./definitions/bash";
 
 // Export types and schemas if needed by the client
 export { bashInputSchema, bashOutputSchema } from "./definitions/bash";
-export { writeInputSchema, writeOutputSchema } from "./definitions/write";
-export { editInputSchema, editOutputSchema } from "./definitions/edit";
-export { multiEditInputSchema, multiEditOutputSchema } from "./definitions/multi-edit";
-
-export type { BashInput, BashOutput } from "./definitions/bash";
-export type { WriteInput, WriteOutput } from "./definitions/write";
 export type { EditInput, EditOutput } from "./definitions/edit";
+export { editInputSchema, editOutputSchema } from "./definitions/edit";
 export type { MultiEditInput, MultiEditOutput } from "./definitions/multi-edit";
+export {
+	multiEditInputSchema,
+	multiEditOutputSchema,
+} from "./definitions/multi-edit";
+export type { WriteInput, WriteOutput } from "./definitions/write";
+export { writeInputSchema, writeOutputSchema } from "./definitions/write";
+export * from "./types";

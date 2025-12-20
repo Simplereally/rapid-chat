@@ -7,8 +7,8 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { resolveSafePath } from "../file-utils";
 import type { WriteInput, WriteOutput } from "../definitions/write";
+import { resolveSafePath } from "../file-utils";
 
 /**
  * Execute a file write operation.

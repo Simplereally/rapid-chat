@@ -16,8 +16,8 @@
  * - Designed for local development use only
  */
 
-import type { Tool } from "@tanstack/ai";
 import { spawn } from "node:child_process";
+import type { Tool } from "@tanstack/ai";
 import { z } from "zod";
 
 // =============================================================================
@@ -46,11 +46,18 @@ export const bashInputSchema = z.object({
 });
 
 export const bashOutputSchema = z.object({
-	success: z.boolean().describe("Whether the command executed successfully (exit code 0)"),
-	exitCode: z.number().nullable().describe("Command exit code, null if killed by timeout"),
+	success: z
+		.boolean()
+		.describe("Whether the command executed successfully (exit code 0)"),
+	exitCode: z
+		.number()
+		.nullable()
+		.describe("Command exit code, null if killed by timeout"),
 	stdout: z.string().describe("Standard output from the command"),
 	stderr: z.string().describe("Standard error output from the command"),
-	timedOut: z.boolean().describe("Whether the command was killed due to timeout"),
+	timedOut: z
+		.boolean()
+		.describe("Whether the command was killed due to timeout"),
 	executionTime: z.number().describe("Execution time in milliseconds"),
 });
 
@@ -102,7 +109,10 @@ async function executeBash(input: BashInput): Promise<BashOutput> {
 			stdout += data.toString();
 			// Limit stdout size to prevent memory issues
 			if (stdout.length > 1_000_000) {
-				stdout = stdout.slice(0, 500_000) + "\n...[output truncated]...\n" + stdout.slice(-500_000);
+				stdout =
+					stdout.slice(0, 500_000) +
+					"\n...[output truncated]...\n" +
+					stdout.slice(-500_000);
 			}
 		});
 
@@ -111,7 +121,10 @@ async function executeBash(input: BashInput): Promise<BashOutput> {
 			stderr += data.toString();
 			// Limit stderr size
 			if (stderr.length > 100_000) {
-				stderr = stderr.slice(0, 50_000) + "\n...[output truncated]...\n" + stderr.slice(-50_000);
+				stderr =
+					stderr.slice(0, 50_000) +
+					"\n...[output truncated]...\n" +
+					stderr.slice(-50_000);
 			}
 		});
 
@@ -155,7 +168,11 @@ async function executeBash(input: BashInput): Promise<BashOutput> {
  * Bash tool for executing shell commands.
  * ⚠️ ALWAYS requires user approval - this can modify the system.
  */
-export const bashTool: Tool<typeof bashInputSchema, typeof bashOutputSchema, "bash"> = {
+export const bashTool: Tool<
+	typeof bashInputSchema,
+	typeof bashOutputSchema,
+	"bash"
+> = {
 	name: "bash",
 	description: `Execute a shell command on the local system.
 

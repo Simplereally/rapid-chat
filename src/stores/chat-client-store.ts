@@ -5,19 +5,19 @@ import type { UIMessage } from "@tanstack/ai-react";
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { useShallow } from "zustand/shallow";
+import { deserializeMessageParts } from "@/features/ai-chat/lib/message-serialization";
+// Import client tools for Pattern B
+import {
+	bashToolClient,
+	editToolClient,
+	multiEditToolClient,
+	writeToolClient,
+} from "@/tools/client-index";
 import {
 	broadcastStreamingComplete,
 	broadcastStreamingUpdate,
 	initCrossTabSync,
 } from "./cross-tab-sync";
-import { deserializeMessageParts } from "@/features/ai-chat/lib/message-serialization";
-// Import client tools for Pattern B
-import {
-	bashToolClient,
-	writeToolClient,
-	editToolClient,
-	multiEditToolClient,
-} from "@/tools/client-index";
 
 // Thread streaming status for UI indicators
 export type ThreadStreamingStatus = "streaming" | "completed";
@@ -373,9 +373,10 @@ export const useChatClientStore = create<ChatStore>()(
 						(msg, index) => {
 							// For assistant messages, deserialize parts to restore tool calls
 							// For user messages, keep as simple text parts
-							const parts = msg.role === "assistant"
-								? deserializeMessageParts(msg.content) as UIMessage["parts"]
-								: [{ type: "text" as const, content: msg.content }];
+							const parts =
+								msg.role === "assistant"
+									? (deserializeMessageParts(msg.content) as UIMessage["parts"])
+									: [{ type: "text" as const, content: msg.content }];
 
 							return {
 								id: msg.id || `history-${index}`,

@@ -68,18 +68,24 @@ function getContentFingerprint(message: ChatUiMessage): string {
 	let totalLength = 0;
 	let toolStates = "";
 	for (const part of parts) {
-		const p = part as { content?: string; text?: string; state?: string; output?: unknown; approval?: { approved?: boolean } };
+		const p = part as {
+			content?: string;
+			text?: string;
+			state?: string;
+			output?: unknown;
+			approval?: { approved?: boolean };
+		};
 		if (typeof p.content === "string") totalLength += p.content.length;
 		if (typeof p.text === "string") totalLength += p.text.length;
 		// Include tool call state, output, and approval status in fingerprint
 		if (p.state) toolStates += p.state;
 		// Include whether output exists (for spinner → tick transition)
 		if (p.output !== undefined) toolStates += "o";
-		if (p.approval?.approved !== undefined) toolStates += p.approval.approved ? "1" : "0";
+		if (p.approval?.approved !== undefined)
+			toolStates += p.approval.approved ? "1" : "0";
 	}
 	return `${message.id}:${parts.length}:${totalLength}:${toolStates}`;
 }
-
 
 export function useParsedMessages(
 	displayMessages: ChatUiMessage[],

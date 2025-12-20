@@ -1,6 +1,6 @@
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Bot } from "lucide-react";
 import type { RefObject } from "react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import type { ParsedMessage } from "../types";
 import { ChatMessage } from "./chat-message";
 

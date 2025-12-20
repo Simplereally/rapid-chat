@@ -1,26 +1,26 @@
-import { env } from "@/env";
-import {
-	// Safe tools with execute functions (auto-execute on server)
-	grepTool,
-	globTool,
-	lsTool,
-	readTool,
-	webSearchTool,
-	// Tool DEFINITIONS only (no execute - client handles approval + execution)
-	bashToolDef,
-	writeToolDef,
-	editToolDef,
-	multiEditToolDef,
-} from "@/tools";
 import {
 	type AgentLoopStrategy,
-	type ModelMessage,
 	chat,
+	type ModelMessage,
 	toStreamResponse,
 } from "@tanstack/ai";
 import { ollama } from "@tanstack/ai-ollama";
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
+import { env } from "@/env";
+import {
+	// Tool DEFINITIONS only (no execute - client handles approval + execution)
+	bashToolDef,
+	editToolDef,
+	globTool,
+	// Safe tools with execute functions (auto-execute on server)
+	grepTool,
+	lsTool,
+	multiEditToolDef,
+	readTool,
+	webSearchTool,
+	writeToolDef,
+} from "@/tools";
 
 /**
  * Available tools for the chat model (Claude Code aligned).
@@ -160,9 +160,7 @@ export const Route = createFileRoute("/api/chat")({
 					// No need to attach parts anymore - Pattern B handles approval client-side!
 					const conversationMessages = incomingMessages.filter(
 						(m) =>
-							m.role === "user" ||
-							m.role === "assistant" ||
-							m.role === "tool",
+							m.role === "user" || m.role === "assistant" || m.role === "tool",
 					) as ModelMessage[];
 
 					// Agent loop strategy: Continue looping when model wants to use tools
@@ -207,7 +205,9 @@ export const Route = createFileRoute("/api/chat")({
 						console.log(
 							`[Chat Debug] Message count: ${conversationMessages.length}`,
 						);
-						console.log(`[Chat Debug] Using Pattern B - no UIMessage merging needed`);
+						console.log(
+							`[Chat Debug] Using Pattern B - no UIMessage merging needed`,
+						);
 						try {
 							for await (const chunk of source) {
 								chunkCount++;

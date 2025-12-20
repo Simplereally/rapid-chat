@@ -1,8 +1,8 @@
+import { AlertTriangle, Bot, User } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { MarkdownMessage } from "@/components/ui/markdown-message";
-import { AlertTriangle, Bot, User } from "lucide-react";
 import { stripThinkPrefix } from "../lib/chat-utils";
 import type { ParsedMessage, ParsedTextPart } from "../types";
 import { ChatMessageActions } from "./chat-message-actions";

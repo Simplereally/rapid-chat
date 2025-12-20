@@ -14,9 +14,7 @@ import { z } from "zod";
 // =============================================================================
 
 export const editInputSchema = z.object({
-	path: z
-		.string()
-		.describe("The file path to edit. Must be an existing file."),
+	path: z.string().describe("The file path to edit. Must be an existing file."),
 	oldText: z
 		.string()
 		.describe(

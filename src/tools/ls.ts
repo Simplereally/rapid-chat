@@ -1,7 +1,7 @@
-import type { Tool } from "@tanstack/ai";
-import { z } from "zod";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import type { Tool } from "@tanstack/ai";
+import { z } from "zod";
 import { resolveSafePath } from "./file-utils";
 
 // =============================================================================
@@ -36,7 +36,10 @@ const lsInputSchema = z.object({
 const lsOutputSchema = z.object({
 	success: z.boolean().describe("Whether the listing succeeded"),
 	path: z.string().describe("The resolved directory path"),
-	totalItems: z.number().optional().describe("Total number of items in directory"),
+	totalItems: z
+		.number()
+		.optional()
+		.describe("Total number of items in directory"),
 	entries: z
 		.array(
 			z.object({

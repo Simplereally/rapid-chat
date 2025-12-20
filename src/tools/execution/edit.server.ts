@@ -6,8 +6,8 @@
  */
 
 import * as fs from "node:fs/promises";
-import { resolveSafePath } from "../file-utils";
 import type { EditInput, EditOutput } from "../definitions/edit";
+import { resolveSafePath } from "../file-utils";
 
 /**
  * Escape special regex characters in a string
@@ -45,7 +45,9 @@ function getContextualDiff(
 
 	const beforeLines = lines.slice(contextStart, contextEnd + 1);
 	const afterContent = content.replace(oldText, newText);
-	const afterLines = afterContent.split("\n").slice(contextStart, contextEnd + 1);
+	const afterLines = afterContent
+		.split("\n")
+		.slice(contextStart, contextEnd + 1);
 
 	return {
 		before: beforeLines.join("\n"),
@@ -76,7 +78,8 @@ export async function executeEdit(input: EditInput): Promise<EditOutput> {
 				success: false,
 				path: resolvedPath,
 				replacementsCount: 0,
-				error: `Could not find the specified text to replace. ` +
+				error:
+					`Could not find the specified text to replace. ` +
 					`Make sure oldText matches exactly, including whitespace and indentation.`,
 			};
 		}
@@ -86,7 +89,8 @@ export async function executeEdit(input: EditInput): Promise<EditOutput> {
 				success: false,
 				path: resolvedPath,
 				replacementsCount: 0,
-				error: `Found ${occurrences} occurrence(s) of the text, but expected ${expectedReplacements}. ` +
+				error:
+					`Found ${occurrences} occurrence(s) of the text, but expected ${expectedReplacements}. ` +
 					`To prevent unintended changes, the edit was not applied. ` +
 					`Either make oldText more specific or update expectedReplacements.`,
 			};

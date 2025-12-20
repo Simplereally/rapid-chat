@@ -8,8 +8,8 @@
  */
 
 import { createFileRoute } from "@tanstack/react-router";
-import { executeEdit } from "@/tools/execution/edit.server";
 import { editInputSchema } from "@/tools/definitions/edit";
+import { executeEdit } from "@/tools/execution/edit.server";
 
 export const Route = createFileRoute("/api/tools/edit")({
 	server: {
@@ -22,7 +22,7 @@ export const Route = createFileRoute("/api/tools/edit")({
 					if (!parsed.success) {
 						return Response.json(
 							{ error: "Invalid input", details: parsed.error.issues },
-							{ status: 400 }
+							{ status: 400 },
 						);
 					}
 
@@ -37,9 +37,12 @@ export const Route = createFileRoute("/api/tools/edit")({
 						{
 							success: false,
 							path: "",
-							error: error instanceof Error ? error.message : "Internal server error",
+							error:
+								error instanceof Error
+									? error.message
+									: "Internal server error",
 						},
-						{ status: 500 }
+						{ status: 500 },
 					);
 				}
 			},

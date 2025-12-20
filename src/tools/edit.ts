@@ -1,6 +1,6 @@
+import * as fs from "node:fs/promises";
 import type { Tool } from "@tanstack/ai";
 import { z } from "zod";
-import * as fs from "node:fs/promises";
 import { resolveSafePath } from "./file-utils";
 
 // =============================================================================
@@ -8,9 +8,7 @@ import { resolveSafePath } from "./file-utils";
 // =============================================================================
 
 const editInputSchema = z.object({
-	path: z
-		.string()
-		.describe("The file path to edit. Must be an existing file."),
+	path: z.string().describe("The file path to edit. Must be an existing file."),
 	oldText: z
 		.string()
 		.describe(
@@ -85,7 +83,9 @@ function getContextualDiff(
 
 	const beforeLines = lines.slice(contextStart, contextEnd + 1);
 	const afterContent = content.replace(oldText, newText);
-	const afterLines = afterContent.split("\n").slice(contextStart, contextEnd + 1);
+	const afterLines = afterContent
+		.split("\n")
+		.slice(contextStart, contextEnd + 1);
 
 	return {
 		before: beforeLines.join("\n"),
@@ -115,7 +115,8 @@ async function executeEdit(input: EditInput): Promise<EditOutput> {
 				success: false,
 				path: resolvedPath,
 				replacementsCount: 0,
-				error: `Could not find the specified text to replace. ` +
+				error:
+					`Could not find the specified text to replace. ` +
 					`Make sure oldText matches exactly, including whitespace and indentation.`,
 			};
 		}
@@ -125,7 +126,8 @@ async function executeEdit(input: EditInput): Promise<EditOutput> {
 				success: false,
 				path: resolvedPath,
 				replacementsCount: 0,
-				error: `Found ${occurrences} occurrence(s) of the text, but expected ${expectedReplacements}. ` +
+				error:
+					`Found ${occurrences} occurrence(s) of the text, but expected ${expectedReplacements}. ` +
 					`To prevent unintended changes, the edit was not applied. ` +
 					`Either make oldText more specific or update expectedReplacements.`,
 			};
@@ -171,7 +173,11 @@ function escapeRegex(string: string): string {
  * Use this for making a single, targeted edit to a file.
  * For multiple edits in the same file, use multi_edit instead.
  */
-export const editTool: Tool<typeof editInputSchema, typeof editOutputSchema, "edit"> = {
+export const editTool: Tool<
+	typeof editInputSchema,
+	typeof editOutputSchema,
+	"edit"
+> = {
 	name: "edit",
 	description:
 		"Make a single find-and-replace edit in a file. " +
