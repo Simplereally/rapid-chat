@@ -1,5 +1,5 @@
 import { chat, type StreamChunk } from "@tanstack/ai";
-import { ollama } from "@tanstack/ai-ollama";
+import { createOllamaChat } from "@tanstack/ai-ollama";
 import { createFileRoute } from "@tanstack/react-router";
 import { ConvexHttpClient } from "convex/browser";
 import { z } from "zod";
@@ -58,9 +58,7 @@ Rules:
 - Examples of good titles: "Python debugging help", "Recipe for chocolate cake", "Travel plans for Paris", "Understanding quantum physics"`;
 
 					const stream = await genericChat({
-						adapter: ollama({
-							baseUrl: env.OLLAMA_BASE_URL,
-						}),
+						adapter: createOllamaChat(env.OLLAMA_MODEL, env.OLLAMA_BASE_URL),
 						messages: [
 							{ role: "system", content: systemPrompt },
 							{
@@ -68,7 +66,6 @@ Rules:
 								content: `/no_think Generate a short title for a conversation that starts with this message: "${userMessage.slice(0, 500)}"`,
 							},
 						],
-						model: env.OLLAMA_MODEL,
 					});
 
 					// Collect the full response

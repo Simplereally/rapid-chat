@@ -17,23 +17,36 @@ import {
  */
 export const bashToolClient = bashToolDef.client(
 	async (args: BashInput): Promise<BashOutput> => {
-		const response = await fetch("/api/tools/bash", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(args),
-		});
+		console.log("[Bash Client] Execute called with args:", args);
 
-		if (!response.ok) {
-			return {
-				success: false,
-				exitCode: null,
-				stdout: "",
-				stderr: `API error: ${response.status} ${response.statusText}`,
-				timedOut: false,
-				executionTime: 0,
-			};
+		try {
+			const response = await fetch("/api/tools/bash", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(args),
+			});
+
+			console.log("[Bash Client] API response status:", response.status);
+
+			if (!response.ok) {
+				const errorResult = {
+					success: false,
+					exitCode: null,
+					stdout: "",
+					stderr: `API error: ${response.status} ${response.statusText}`,
+					timedOut: false,
+					executionTime: 0,
+				};
+				console.log("[Bash Client] Returning error result:", errorResult);
+				return errorResult;
+			}
+
+			const result = await response.json();
+			console.log("[Bash Client] Returning success result:", result);
+			return result;
+		} catch (err) {
+			console.error("[Bash Client] Fetch error:", err);
+			throw err;
 		}
-
-		return response.json();
 	},
 );

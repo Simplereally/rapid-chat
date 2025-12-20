@@ -2,9 +2,9 @@ import {
 	type AgentLoopStrategy,
 	chat,
 	type ModelMessage,
-	toStreamResponse,
+	toServerSentEventsStream,
 } from "@tanstack/ai";
-import { ollama } from "@tanstack/ai-ollama";
+import { createOllamaChat } from "@tanstack/ai-ollama";
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { env } from "@/env";
@@ -104,19 +104,32 @@ const BASE_SYSTEM_PROMPT = `You are an agentic reasoning assistant with advanced
 
 Reason deeply when needed. Act decisively when obvious.`;
 
-// Schema for incoming messages - simplified since we don't need UIMessages anymore
+// Schema for incoming messages
 const MessageSchema = z
 	.object({
 		role: z.enum(["system", "user", "assistant", "tool"]),
 		content: z.string().nullable().optional(),
 		id: z.string().optional(),
 	})
-	.passthrough(); // Allow additional fields like toolCalls, toolCallId without validation
+	.passthrough(); // Allow additional fields like toolCalls, toolCallId, parts without validation
+
+// Schema for UIMessage - flexible to handle all message types
+// User messages have content, assistant messages have parts (with approval state)
+// Tool messages are added when tool results are returned
+const UIMessageSchema = z
+	.object({
+		id: z.string().optional(),
+		role: z.enum(["user", "assistant", "system", "tool"]),
+		parts: z.array(z.any()).optional(), // Parts contain approval state (for assistant messages)
+		content: z.string().nullable().optional(), // Allow null for assistant messages that use parts
+	})
+	.passthrough();
 
 const ChatRequestSchema = z.object({
 	messages: z.array(MessageSchema),
-	// NOTE: uiMessages no longer needed with Pattern B!
-	// The client handles tool approval state entirely client-side
+	// uiMessages contain .parts with tool approval state (part.approval.approved)
+	// The TanStack AI chat() function's collectClientState() extracts this
+	uiMessages: z.array(UIMessageSchema).optional(),
 });
 
 export const Route = createFileRoute("/api/chat")({
@@ -132,13 +145,31 @@ export const Route = createFileRoute("/api/chat")({
 					}
 
 					const json = await request.json();
+					console.log(
+						"[Chat API] Received request body keys:",
+						Object.keys(json),
+					);
+					console.log(
+						"[Chat API] messages count:",
+						json.messages?.length ?? "undefined",
+					);
+					console.log(
+						"[Chat API] uiMessages count:",
+						json.uiMessages?.length ?? "undefined",
+					);
+
 					const validationResult = ChatRequestSchema.safeParse(json);
 
 					if (!validationResult.success) {
+						console.error(
+							"[Chat API] Validation failed:",
+							JSON.stringify(validationResult.error.issues, null, 2),
+						);
 						return new Response("Invalid Request Body", { status: 400 });
 					}
 
-					const { messages: incomingMessages } = validationResult.data;
+					const { messages: incomingMessages, uiMessages } =
+						validationResult.data;
 					const authHeader = request.headers.get("Authorization");
 
 					if (!authHeader) {
@@ -157,11 +188,40 @@ export const Route = createFileRoute("/api/chat")({
 					const allSystemPrompts = [BASE_SYSTEM_PROMPT, ...clientSystemPrompts];
 
 					// Filter to conversation messages (user, assistant, tool)
-					// No need to attach parts anymore - Pattern B handles approval client-side!
 					const conversationMessages = incomingMessages.filter(
 						(m) =>
 							m.role === "user" || m.role === "assistant" || m.role === "tool",
 					) as ModelMessage[];
+
+					// If uiMessages are provided, merge .parts into assistant messages
+					// The TanStack AI chat() function's collectClientState() uses .parts
+					// to extract approval state (part.approval.approved)
+					let messagesForChat = conversationMessages;
+					if (uiMessages && uiMessages.length > 0) {
+						// Merge .parts from UIMessages into conversation messages
+						messagesForChat = conversationMessages.map((msg) => {
+							// Try to find matching UIMessage by checking for toolCalls
+							// Assistant messages with toolCalls are what we need to merge
+							if (msg.role === "assistant" && msg.toolCalls) {
+								// Find the corresponding UIMessage that has .parts with approval
+								for (const uiMsg of uiMessages) {
+									if (uiMsg.role === "assistant" && uiMsg.parts) {
+										// Check if this UIMessage has tool-call parts matching our toolCalls
+										const hasMatchingToolCall = uiMsg.parts.some(
+											(part: { type: string; id: string }) =>
+												part.type === "tool-call" &&
+												msg.toolCalls?.some((tc) => tc.id === part.id),
+										);
+										if (hasMatchingToolCall) {
+											// Merge .parts into the message for collectClientState()
+											return { ...msg, parts: uiMsg.parts };
+										}
+									}
+								}
+							}
+							return msg;
+						}) as ModelMessage[];
+					}
 
 					// Agent loop strategy: Continue looping when model wants to use tools
 					// Max 10 iterations for safety (prevents infinite loops)
@@ -186,11 +246,8 @@ export const Route = createFileRoute("/api/chat")({
 					// these are definitions without execute functions.
 					// The client's ChatClient will receive these and handle approval.
 					const rawStream = chat({
-						adapter: ollama({
-							baseUrl: env.OLLAMA_BASE_URL,
-						}),
-						messages: conversationMessages as any,
-						model: env.OLLAMA_MODEL as "llama3",
+						adapter: createOllamaChat(env.OLLAMA_MODEL, env.OLLAMA_BASE_URL),
+						messages: messagesForChat as any,
 						systemPrompts: allSystemPrompts,
 						tools: availableTools,
 						agentLoopStrategy,
@@ -203,10 +260,17 @@ export const Route = createFileRoute("/api/chat")({
 						let chunkCount = 0;
 						console.log(`[Chat Debug] Starting stream for thread: ${threadId}`);
 						console.log(
-							`[Chat Debug] Message count: ${conversationMessages.length}`,
+							`[Chat Debug] Message count: ${messagesForChat.length}`,
 						);
 						console.log(
-							`[Chat Debug] Using Pattern B - no UIMessage merging needed`,
+							`[Chat Debug] UIMessages provided: ${uiMessages?.length ?? 0}`,
+						);
+						// Log if any messages have .parts (approval state)
+						const messagesWithParts = messagesForChat.filter(
+							(m) => "parts" in m,
+						);
+						console.log(
+							`[Chat Debug] Messages with .parts (approval state): ${messagesWithParts.length}`,
 						);
 						try {
 							for await (const chunk of source) {
@@ -226,7 +290,16 @@ export const Route = createFileRoute("/api/chat")({
 						}
 					}
 
-					return toStreamResponse(debugStream(rawStream));
+					return new Response(
+						toServerSentEventsStream(debugStream(rawStream)),
+						{
+							headers: {
+								"Content-Type": "text/event-stream",
+								"Cache-Control": "no-cache",
+								Connection: "keep-alive",
+							},
+						},
+					);
 				} catch (e) {
 					console.error(e);
 					return new Response("Internal Error", { status: 500 });

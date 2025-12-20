@@ -1,4 +1,4 @@
-import { Bot, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {

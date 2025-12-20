@@ -74,24 +74,41 @@ export function useChatActions({
 				return;
 			}
 
-			// Configure persistence callback for assistant response
-			const persistAssistantMessage = async (message: UIMessage) => {
-				// Serialize all message parts including tool calls for Convex storage
-				// This preserves tool call information so it survives page reloads
-				const content = serializeMessageParts(
-					message.parts as Array<{
-						type: string;
-						content?: string;
-						[key: string]: unknown;
-					}>,
+			// Get the IDs of messages already persisted in Convex
+			const persistedMessageIds = new Set(
+				convexMessages?.map((msg) => msg._id) ?? [],
+			);
+
+			// Configure persistence callback for ALL new assistant messages
+			// This is called when the stream completes with all messages
+			const persistAllNewAssistantMessages = async (
+				allMessages: UIMessage[],
+			) => {
+				// Find assistant messages that aren't already in Convex
+				// This handles agentic loops where there may be multiple assistant messages
+				// (e.g., one with tool calls, one with the final response)
+				const newAssistantMessages = allMessages.filter(
+					(msg) =>
+						msg.role === "assistant" && !persistedMessageIds.has(msg.id),
 				);
 
-				// Convex handles retries automatically
-				await addMessage({
-					threadId: threadId as Id<"threads">,
-					role: "assistant",
-					content,
-				});
+				// Persist each new assistant message in order
+				for (const message of newAssistantMessages) {
+					const content = serializeMessageParts(
+						message.parts as Array<{
+							type: string;
+							content?: string;
+							[key: string]: unknown;
+						}>,
+					);
+
+					// Convex handles retries automatically
+					await addMessage({
+						threadId: threadId as Id<"threads">,
+						role: "assistant",
+						content,
+					});
+				}
 
 				// After successful Convex persistence, nuke the streaming state
 				useChatClientStore.getState().nukeStreamingState(threadId);
@@ -114,7 +131,7 @@ export function useChatActions({
 					role: msg.role as "user" | "assistant",
 					content: msg.content,
 				})),
-				onFinish: persistAssistantMessage,
+				onFinish: persistAllNewAssistantMessages,
 				onError: (error) => {
 					console.error("Stream error:", error);
 				},

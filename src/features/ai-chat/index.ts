@@ -11,6 +11,7 @@ export {
 	ToolApprovalDialog,
 	ToolApprovalInline,
 } from "./components/tool-approval-dialog";
+export { ToolApprovalCard } from "./components/tool-approval-card";
 export { ToolCallIndicator } from "./components/tool-call-indicator";
 export { TypingIndicator } from "./components/typing-indicator";
 

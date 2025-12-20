@@ -1,11 +1,12 @@
 // @ts-nocheck - Types are used in interface definitions
 
-import { ChatClient, fetchServerSentEvents } from "@tanstack/ai-client";
+import { ChatClient } from "@tanstack/ai-client";
 import type { UIMessage } from "@tanstack/ai-react";
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { useShallow } from "zustand/shallow";
 import { deserializeMessageParts } from "@/features/ai-chat/lib/message-serialization";
+import { fetchServerSentEventsWithUIMessages } from "@/lib/connection-adapter";
 // Import client tools for Pattern B
 import {
 	bashToolClient,
@@ -45,7 +46,8 @@ export interface ChatRequestConfig {
 		content: string;
 		id?: string;
 	}>;
-	onFinish?: (message: UIMessage) => void | Promise<void>;
+	/** Called when stream completes with ALL messages (for persisting new assistant messages) */
+	onFinish?: (allMessages: UIMessage[]) => void | Promise<void>;
 	onError?: (error: Error) => void;
 }
 
@@ -154,16 +156,14 @@ export const useChatClientStore = create<ChatStore>()(
 				// Create ChatClient if doesn't exist
 				if (!clientState || !clientState.client) {
 					const client = new ChatClient({
-						// Use standard fetchServerSentEvents adapter - no custom adapter needed!
-						// Pattern B: approval state lives entirely client-side in UIMessage.parts
-						connection: fetchServerSentEvents(
+						// Use custom adapter that sends UIMessages with .parts for tool approval state
+						// Pattern B: approval state lives in UIMessage.parts and must be sent to server
+						connection: fetchServerSentEventsWithUIMessages(
 							() => apiEndpoint,
 							async () => {
 								const headers = await getAuthHeaders();
 								return {
 									headers,
-									// No need to send uiMessages anymore!
-									// The client handles tool approval entirely locally
 								};
 							},
 						),
@@ -266,6 +266,9 @@ export const useChatClientStore = create<ChatStore>()(
 							}
 
 							// No pending approvals - truly complete
+							const clientState = get().clients.get(threadId);
+							const allMessages = clientState?.messages ?? [];
+
 							set((state) => {
 								const updated = new Map(state.clients);
 								const current = updated.get(threadId);
@@ -280,10 +283,11 @@ export const useChatClientStore = create<ChatStore>()(
 								return { clients: updated };
 							});
 
-							// Call external onFinish callback for Convex persistence
-							if (onFinish && finishedMessage.role === "assistant") {
+							// Call external onFinish callback with ALL messages for Convex persistence
+							// This allows persisting all new assistant messages (including tool call messages)
+							if (onFinish && allMessages.length > 0) {
 								try {
-									await onFinish(finishedMessage);
+									await onFinish(allMessages);
 								} catch (err) {
 									console.error("onFinish callback error:", err);
 								}
@@ -595,7 +599,144 @@ export const useChatClientStore = create<ChatStore>()(
 					console.error("No client available for thread:", threadId);
 					return;
 				}
-				await clientState.client.addToolApprovalResponse(response);
+				console.log(
+					`[Tool Approval] Sending approval response for thread ${threadId}:`,
+					response,
+				);
+
+				if (!response.approved) {
+					// If denied, just mark as denied and let the library handle it
+					await clientState.client.addToolApprovalResponse(response);
+					return;
+				}
+
+				// For approved tools, we need to manually execute the client tool
+				// because TanStack AI doesn't auto-execute client tools for approval-required tools
+				const messages = clientState.messages;
+
+				// Find the tool call part that matches this approval
+				let matchedToolCall: {
+					toolName: string;
+					toolCallId: string;
+					args: Record<string, unknown>;
+				} | null = null;
+
+				for (const msg of messages) {
+					if (msg.role === "assistant" && msg.parts) {
+						for (const part of msg.parts) {
+							if (
+								part.type === "tool-call" &&
+								part.approval?.id === response.id
+							) {
+								matchedToolCall = {
+									toolName: part.name,
+									toolCallId: part.id,
+									args:
+										typeof part.arguments === "string"
+											? JSON.parse(part.arguments)
+											: part.arguments,
+								};
+								break;
+							}
+						}
+						if (matchedToolCall) break;
+					}
+				}
+
+				if (!matchedToolCall) {
+					console.error(
+						"[Tool Approval] Could not find matching tool call for approval:",
+						response.id,
+					);
+					await clientState.client.addToolApprovalResponse(response);
+					return;
+				}
+
+				console.log(
+					`[Tool Approval] Executing client tool: ${matchedToolCall.toolName}`,
+				);
+
+				// Find and execute the client tool
+				const clientTool = clientToolsArray.find(
+					(t) => t.name === matchedToolCall!.toolName,
+				);
+
+				if (!clientTool?.execute) {
+					console.error(
+						`[Tool Approval] No client tool found for: ${matchedToolCall.toolName}`,
+					);
+					await clientState.client.addToolApprovalResponse(response);
+					return;
+				}
+
+				try {
+					// Execute the client tool first
+					const output = await clientTool.execute(matchedToolCall.args);
+					console.log(`[Tool Approval] Tool executed, output:`, output);
+
+					// Add the tool result to the client
+					// Note: This will set state to 'input-complete' which breaks areAllToolsComplete()
+					await clientState.client.addToolResult({
+						toolCallId: matchedToolCall.toolCallId,
+						tool: matchedToolCall.toolName,
+						output,
+						state: "output-available",
+					});
+
+					console.log(
+						`[Tool Approval] Tool result added, now marking approval as responded`,
+					);
+
+					// IMPORTANT: Call addToolApprovalResponse AFTER addToolResult
+					// This does two things:
+					// 1. Sets state back to 'approval-responded' (areAllToolsComplete checks for this)
+					// 2. Triggers checkForContinuation() which will continue the agentic loop
+					await clientState.client.addToolApprovalResponse(response);
+
+					// Debug: check the state after marking approval responded
+					// @ts-expect-error - accessing internal processor
+					const messagesAfter = clientState.client.processor?.getMessages();
+					// @ts-expect-error - accessing internal processor
+					const areComplete =
+						clientState.client.processor?.areAllToolsComplete();
+					console.log(`[Tool Approval] After addToolApprovalResponse:`);
+					console.log(`  - Messages count: ${messagesAfter?.length}`);
+					console.log(`  - areAllToolsComplete: ${areComplete}`);
+					if (messagesAfter) {
+						const lastAssistant = messagesAfter.findLast(
+							(m: { role: string }) => m.role === "assistant",
+						);
+						if (lastAssistant?.parts) {
+							for (const part of lastAssistant.parts) {
+								if (part.type === "tool-call") {
+									console.log(`  - Tool call ${part.id}:`);
+									console.log(`    - state: ${part.state}`);
+									console.log(`    - output: ${part.output !== undefined}`);
+									console.log(`    - approval: ${!!part.approval}`);
+								}
+							}
+						}
+					}
+
+					console.log(
+						`[Tool Approval] Approval responded, agentic loop should continue`,
+					);
+				} catch (err) {
+					console.error(`[Tool Approval] Tool execution failed:`, err);
+
+					// Add error result first
+					await clientState.client.addToolResult({
+						toolCallId: matchedToolCall.toolCallId,
+						tool: matchedToolCall.toolName,
+						output: null,
+						state: "output-error",
+						errorText:
+							err instanceof Error ? err.message : "Tool execution failed",
+					});
+
+					// Then mark approval as responded to trigger continuation
+					await clientState.client.addToolApprovalResponse(response);
+				}
 			},
 		}),
 		{ name: "ChatClientStore" },

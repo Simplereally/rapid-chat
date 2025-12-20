@@ -10,6 +10,7 @@ import {
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ToolApprovalDialogProps {
@@ -60,8 +61,8 @@ export function ToolApprovalDialog({
 				{details.length > 0 && (
 					<ScrollArea className="max-h-48 rounded-md border bg-muted/30 p-3">
 						<div className="space-y-2 text-sm">
-							{details.map((detail, index) => (
-								<div key={index} className="flex items-start gap-2">
+							{details.map((detail) => (
+								<div key={detail.label} className="flex items-start gap-2">
 									<span className="text-muted-foreground font-medium min-w-[80px]">
 										{detail.label}:
 									</span>
@@ -84,7 +85,7 @@ export function ToolApprovalDialog({
 					</AlertDialogCancel>
 					<AlertDialogAction
 						onClick={() => onApprove(approvalId)}
-						className="gap-2 bg-primary hover:bg-primary/90"
+						className="gap-2"
 					>
 						<Check className="h-4 w-4" />
 						Approve
@@ -127,8 +128,8 @@ export function ToolApprovalInline({
 
 			{details.length > 0 && (
 				<div className="bg-muted/30 rounded-md p-2 space-y-1">
-					{details.slice(0, 3).map((detail, index) => (
-						<div key={index} className="flex items-center gap-2 text-xs">
+					{details.slice(0, 3).map((detail) => (
+						<div key={detail.label} className="flex items-center gap-2 text-xs">
 							<span className="text-muted-foreground">{detail.label}:</span>
 							<code className="font-mono truncate max-w-[200px]">
 								{detail.value}
@@ -139,20 +140,22 @@ export function ToolApprovalInline({
 			)}
 
 			<div className="flex gap-2">
-				<button
+				<Button
 					onClick={() => onDeny(approvalId)}
-					className="flex-1 inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium bg-muted hover:bg-muted/80 transition-colors"
+					variant="secondary"
+					className="flex-1"
 				>
 					<X className="h-4 w-4" />
 					Deny
-				</button>
-				<button
+				</Button>
+				<Button
 					onClick={() => onApprove(approvalId)}
-					className="flex-1 inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+					variant="default"
+					className="flex-1"
 				>
 					<Check className="h-4 w-4" />
 					Approve
-				</button>
+				</Button>
 			</div>
 		</div>
 	);
@@ -178,8 +181,9 @@ function getApprovalDetails(
 			const path = String(args.path ?? "unknown");
 			const destination = args.destination ? String(args.destination) : null;
 			const contentPreview = args.content
-				? String(args.content).slice(0, 100) +
-					(String(args.content).length > 100 ? "..." : "")
+				? `${String(args.content).slice(0, 100)}${
+						String(args.content).length > 100 ? "..." : ""
+					}`
 				: null;
 
 			const operationLabels: Record<string, string> = {

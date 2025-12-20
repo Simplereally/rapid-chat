@@ -3,12 +3,15 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { MarkdownMessage } from "@/components/ui/markdown-message";
+import type { ToolName } from "@/tools/client-index";
 import { stripThinkPrefix } from "../lib/chat-utils";
 import type { ParsedMessage, ParsedTextPart } from "../types";
 import { ChatMessageActions } from "./chat-message-actions";
 import { EditMessageForm } from "./edit-message-form";
+import { GeneratingIndicator } from "./generating-indicator";
 import { TerminalOutput } from "./terminal-output";
 import { ThinkingSection } from "./thinking-section";
+import { ToolApprovalCard } from "./tool-approval-card";
 import { ToolCallIndicator } from "./tool-call-indicator";
 
 interface ChatMessageProps {
@@ -369,10 +372,37 @@ export function ChatMessage({
 										}
 
 										// For other tools, always show indicator
+										// If approval is required and not yet approved, show approval card
+										const isApprovalRequired =
+											toolPart.state === "approval-requested";
+										const approvalId = toolPart.approval?.id;
+
+										if (isApprovalRequired && approvalId) {
+											return (
+												<ToolApprovalCard
+													key={`${message.id}-approval-${toolPart.id}`}
+													toolName={toolPart.name}
+													args={parsedArgs}
+													approvalId={approvalId}
+													onApprove={
+														onApproveToolCall
+															? (id) => onApproveToolCall(id)
+															: () => {}
+													}
+													onDeny={
+														onDenyToolCall
+															? (id) => onDenyToolCall(id)
+															: () => {}
+													}
+												/>
+											);
+										}
+
+										// Show regular indicator for executing/completed tools
 										return (
 											<ToolCallIndicator
 												key={`${message.id}-tool-${toolPart.id}`}
-												toolName={toolPart.name as any}
+												toolName={toolPart.name as ToolName}
 												args={parsedArgs}
 												state={toolPart.state}
 												output={effectiveOutput}
@@ -382,9 +412,7 @@ export function ChatMessage({
 									return null;
 								})}
 
-								{showGenerating && (
-									<ToolCallIndicator toolName="generating" args={{}} />
-								)}
+								{showGenerating && <GeneratingIndicator />}
 							</>
 						)}
 					</div>
