@@ -3,58 +3,24 @@ import {
 	type RefObject,
 	useCallback,
 	useEffect,
-	useLayoutEffect,
 	useRef,
 	useState,
 } from "react";
 import type { ParsedMessage } from "../types";
 
-/**
- * Get a lightweight fingerprint of the last message for scroll detection.
- * Avoids JSON.stringify which is expensive during rapid streaming.
- */
-function getLastMessageFingerprint(
-	messages: UIMessage[] | ParsedMessage[],
-): string {
-	if (messages.length === 0) return "";
-	const last = messages[messages.length - 1];
-	// Use id + parts count + approximate content length for change detection
-	// This is much cheaper than JSON.stringify during streaming
-	// Handle both UIMessage (parts) and ParsedMessage (parsedParts)
-	const parts =
-		(last as UIMessage).parts || (last as ParsedMessage).parsedParts || [];
-	let contentLength = 0;
-	for (const part of parts) {
-		const p = part as {
-			content?: string;
-			text?: string;
-			parsedContent?: string;
-		};
-		if (typeof p.content === "string") contentLength += p.content.length;
-		if (typeof p.text === "string") contentLength += p.text.length;
-		if (typeof p.parsedContent === "string")
-			contentLength += p.parsedContent.length;
-	}
-	return `${last.id}:${parts.length}:${contentLength}`;
-}
-
 const PINNED_TO_BOTTOM_THRESHOLD_PX = 12;
 
 export function useChatScroll(
 	messages: UIMessage[] | ParsedMessage[],
-	isLoading: boolean,
+	_isLoading: boolean, // Kept for API compatibility, but no longer used
 ) {
 	const scrollViewportRef = useRef<HTMLDivElement>(
 		null,
 	) as RefObject<HTMLDivElement>;
 
 	const [isPinnedToBottom, setIsPinnedToBottom] = useState(true);
-	const isPinnedToBottomRef = useRef(isPinnedToBottom);
 	const hasPerformedInitialScrollRef = useRef(false);
-
-	useEffect(() => {
-		isPinnedToBottomRef.current = isPinnedToBottom;
-	}, [isPinnedToBottom]);
+	const prevMessageCountRef = useRef(messages.length);
 
 	const getIsNearBottom = useCallback((viewport: HTMLDivElement): boolean => {
 		const distanceFromBottom =
@@ -76,6 +42,7 @@ export function useChatScroll(
 		scrollToBottom("smooth");
 	}, [scrollToBottom]);
 
+	// Track scroll position to show/hide scroll-to-bottom button
 	useEffect(() => {
 		const viewport = scrollViewportRef.current;
 		if (!viewport) return;
@@ -99,14 +66,12 @@ export function useChatScroll(
 		};
 	}, [getIsNearBottom]);
 
-	// Auto-scroll trigger using lightweight fingerprint
-	const lastMessageFingerprint = getLastMessageFingerprint(messages);
-	const lastMessageFingerprintRef = useRef(lastMessageFingerprint);
-
-	useLayoutEffect(() => {
+	// Scroll to bottom only on initial mount and when new messages are added (not during streaming)
+	useEffect(() => {
 		const viewport = scrollViewportRef.current;
 		if (!viewport) return;
 
+		// Initial scroll to bottom on mount
 		if (!hasPerformedInitialScrollRef.current && messages.length > 0) {
 			hasPerformedInitialScrollRef.current = true;
 			setIsPinnedToBottom(true);
@@ -114,16 +79,15 @@ export function useChatScroll(
 			return;
 		}
 
-		const didFingerprintChange =
-			lastMessageFingerprintRef.current !== lastMessageFingerprint;
-		lastMessageFingerprintRef.current = lastMessageFingerprint;
-		if (!didFingerprintChange && !isLoading) return;
+		// Scroll to bottom when a new message is added (message count increases)
+		// This handles: user sends a message, or new AI response starts
+		const messageCountChanged = prevMessageCountRef.current !== messages.length;
+		prevMessageCountRef.current = messages.length;
 
-		if (isPinnedToBottomRef.current) {
+		if (messageCountChanged && messages.length > 0) {
 			scrollToBottom("auto");
-			return;
 		}
-	}, [lastMessageFingerprint, isLoading, messages.length, scrollToBottom]);
+	}, [messages.length, scrollToBottom]);
 
 	const showScrollToBottom = !isPinnedToBottom;
 
