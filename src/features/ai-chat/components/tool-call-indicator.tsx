@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import type { ToolName } from "@/tools";
+import type { ToolName } from "@/tools/client-index";
 import {
     AlertTriangle,
     CheckCircle2,

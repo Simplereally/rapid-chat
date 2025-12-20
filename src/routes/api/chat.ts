@@ -1,19 +1,21 @@
 import { env } from "@/env";
 import {
-	bashTool,
-	editTool,
-	globTool,
+	// Safe tools with execute functions (auto-execute on server)
 	grepTool,
+	globTool,
 	lsTool,
-	multiEditTool,
 	readTool,
 	webSearchTool,
-	writeTool,
+	// Tool DEFINITIONS only (no execute - client handles approval + execution)
+	bashToolDef,
+	writeToolDef,
+	editToolDef,
+	multiEditToolDef,
 } from "@/tools";
 import {
 	type AgentLoopStrategy,
-	chat,
 	type ModelMessage,
+	chat,
 	toStreamResponse,
 } from "@tanstack/ai";
 import { ollama } from "@tanstack/ai-ollama";
@@ -23,11 +25,16 @@ import { z } from "zod";
 /**
  * Available tools for the chat model (Claude Code aligned).
  *
+ * Pattern B Architecture:
+ * - Safe tools (no approval): Full Tool with execute function - auto-execute on server
+ * - Approval-required tools: Definition only (no execute) - server emits tool-input-available
+ *   chunks which the client handles with approval UI + execution via /api/tools/*
+ *
  * Direct file IO:
  * - read: Read files (text, images, PDFs)
- * - write: Create or overwrite files [Requires Permission]
- * - edit: Single find-and-replace in a file [Requires Permission]
- * - multi_edit: Batch multiple Edit operations [Requires Permission]
+ * - write: Create or overwrite files [Definition only - Client executes]
+ * - edit: Single find-and-replace in a file [Definition only - Client executes]
+ * - multi_edit: Batch multiple Edit operations [Definition only - Client executes]
  *
  * Search / Discovery:
  * - glob: Find files by pattern
@@ -35,25 +42,32 @@ import { z } from "zod";
  * - ls: List directory contents
  *
  * Shell / Terminal:
- * - bash: Execute shell commands [Requires Permission]
+ * - bash: Execute shell commands [Definition only - Client executes]
  */
 const availableTools = [
-	// Search / Discovery (use these FIRST to locate what you need)
+	// ==========================================================================
+	// SAFE TOOLS (auto-execute on server - no approval needed)
+	// ==========================================================================
 	grepTool, // Search file contents by regex
 	globTool, // Find files by pattern
 	lsTool, // List directory contents
-
-	// Direct file IO
 	readTool, // Read files (text, images, PDFs)
-	writeTool, // ⚠️ Create or overwrite files [Requires Permission]
-	editTool, // ⚠️ Single find-and-replace [Requires Permission]
-	multiEditTool, // ⚠️ Batch edits on one file [Requires Permission]
-
-	// Shell / Terminal
-	bashTool, // ⚠️ Execute shell commands [Requires Permission]
-
-	// External tools
 	webSearchTool, // Search the web for current information
+
+	// ==========================================================================
+	// APPROVAL-REQUIRED TOOLS (definitions only - client handles execution)
+	// These have NO execute function. When the LLM calls them:
+	// 1. Server emits tool-input-available chunk
+	// 2. Client receives chunk and shows approval UI
+	// 3. User approves/denies
+	// 4. Client tool's execute() calls /api/tools/{name}
+	// 5. Server executes the tool and returns result
+	// 6. Client adds result and continues flow
+	// ==========================================================================
+	bashToolDef, // ⚠️ Execute shell commands - /api/tools/bash
+	writeToolDef, // ⚠️ Create or overwrite files - /api/tools/write
+	editToolDef, // ⚠️ Single find-and-replace - /api/tools/edit
+	multiEditToolDef, // ⚠️ Batch edits on one file - /api/tools/multi-edit
 ];
 
 /**
@@ -90,15 +104,19 @@ const BASE_SYSTEM_PROMPT = `You are an agentic reasoning assistant with advanced
 
 Reason deeply when needed. Act decisively when obvious.`;
 
+// Schema for incoming messages - simplified since we don't need UIMessages anymore
 const MessageSchema = z
 	.object({
 		role: z.enum(["system", "user", "assistant", "tool"]),
 		content: z.string().nullable().optional(),
+		id: z.string().optional(),
 	})
 	.passthrough(); // Allow additional fields like toolCalls, toolCallId without validation
 
 const ChatRequestSchema = z.object({
 	messages: z.array(MessageSchema),
+	// NOTE: uiMessages no longer needed with Pattern B!
+	// The client handles tool approval state entirely client-side
 });
 
 export const Route = createFileRoute("/api/chat")({
@@ -138,14 +156,14 @@ export const Route = createFileRoute("/api/chat")({
 					// Combine base system prompt with any client-provided prompts
 					const allSystemPrompts = [BASE_SYSTEM_PROMPT, ...clientSystemPrompts];
 
-					const conversationMessages = incomingMessages
-						.filter(
-							(m) =>
-								m.role === "user" ||
-								m.role === "assistant" ||
-								m.role === "tool",
-						)
-						.map((m) => m as unknown as ModelMessage<string | null>);
+					// Filter to conversation messages (user, assistant, tool)
+					// No need to attach parts anymore - Pattern B handles approval client-side!
+					const conversationMessages = incomingMessages.filter(
+						(m) =>
+							m.role === "user" ||
+							m.role === "assistant" ||
+							m.role === "tool",
+					) as ModelMessage[];
 
 					// Agent loop strategy: Continue looping when model wants to use tools
 					// Max 10 iterations for safety (prevents infinite loops)
@@ -164,12 +182,16 @@ export const Route = createFileRoute("/api/chat")({
 						return finishReason === "tool_calls";
 					};
 
-					// Stream the chat response - no DB persistence here
+					// Stream the chat response
+					// NOTE: For approval-required tools (bashToolDef, writeToolDef, etc.),
+					// the chat() function will emit tool-input-available chunks because
+					// these are definitions without execute functions.
+					// The client's ChatClient will receive these and handle approval.
 					const rawStream = chat({
 						adapter: ollama({
 							baseUrl: env.OLLAMA_BASE_URL,
 						}),
-						messages: conversationMessages,
+						messages: conversationMessages as any,
 						model: env.OLLAMA_MODEL as "llama3",
 						systemPrompts: allSystemPrompts,
 						tools: availableTools,
@@ -185,12 +207,13 @@ export const Route = createFileRoute("/api/chat")({
 						console.log(
 							`[Chat Debug] Message count: ${conversationMessages.length}`,
 						);
+						console.log(`[Chat Debug] Using Pattern B - no UIMessage merging needed`);
 						try {
 							for await (const chunk of source) {
 								chunkCount++;
 								console.log(
 									`[Chat Debug] Chunk #${chunkCount}:`,
-									JSON.stringify(chunk).slice(0, 50),
+									JSON.stringify(chunk).slice(0, 100),
 								);
 								yield chunk;
 							}

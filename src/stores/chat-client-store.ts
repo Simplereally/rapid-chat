@@ -11,6 +11,13 @@ import {
 	initCrossTabSync,
 } from "./cross-tab-sync";
 import { deserializeMessageParts } from "@/features/ai-chat/lib/message-serialization";
+// Import client tools for Pattern B
+import {
+	bashToolClient,
+	writeToolClient,
+	editToolClient,
+	multiEditToolClient,
+} from "@/tools/client-index";
 
 // Thread streaming status for UI indicators
 export type ThreadStreamingStatus = "streaming" | "completed";
@@ -87,6 +94,18 @@ interface ChatStore {
 }
 
 /**
+ * Client tools array for ChatClient registration.
+ * These are called by the ChatClient after user approval.
+ * They call the server-side /api/tools/* endpoints for execution.
+ */
+const clientToolsArray = [
+	bashToolClient,
+	writeToolClient,
+	editToolClient,
+	multiEditToolClient,
+];
+
+/**
  * Global Zustand store for managing ChatClient instances across threads.
  */
 export const useChatClientStore = create<ChatStore>()(
@@ -135,12 +154,22 @@ export const useChatClientStore = create<ChatStore>()(
 				// Create ChatClient if doesn't exist
 				if (!clientState || !clientState.client) {
 					const client = new ChatClient({
+						// Use standard fetchServerSentEvents adapter - no custom adapter needed!
+						// Pattern B: approval state lives entirely client-side in UIMessage.parts
 						connection: fetchServerSentEvents(
 							() => apiEndpoint,
-							async () => ({
-								headers: await getAuthHeaders(),
-							}),
+							async () => {
+								const headers = await getAuthHeaders();
+								return {
+									headers,
+									// No need to send uiMessages anymore!
+									// The client handles tool approval entirely locally
+								};
+							},
 						),
+						// Register client tools for approval-required operations
+						// These tools have needsApproval: true and execute by calling /api/tools/*
+						tools: clientToolsArray,
 						onMessagesChange: (newMessages: UIMessage[]) => {
 							// Sync messages to Zustand store
 							set((state) => {
