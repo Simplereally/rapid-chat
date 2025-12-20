@@ -173,7 +173,7 @@ export function useMessageActions({
 		// Send the edited message
 		const thinkPrefix = isThinkingEnabled ? "/think " : "/no_think ";
 
-		setPendingAction({ type: "send", content: thinkPrefix + editContent });
+		setPendingAction({ type: "send", content: editContent });
 
 		// Clear edit state
 		setEditingMessageId(null);
