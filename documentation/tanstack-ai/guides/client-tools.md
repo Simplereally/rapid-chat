@@ -1,314 +1,329 @@
 ---
-title: Server Tools
-id: server-tools
+title: Client Tools
+id: client-tools
+order: 4
 ---
 
-Server tools execute automatically when called by the LLM. They have full access to server resources like databases, APIs, and environment variables.
+Client tools execute in the browser, enabling UI updates, local storage access, and browser API interactions. Unlike server tools, client tools don't have an `execute` function in their server definition.
 
 ```mermaid
 sequenceDiagram
     participant LLM Service
     participant Server
-    participant Tool
-    participant Database/API
+    participant Browser
+    participant ClientTool
     
-    LLM Service->>Server: tool_call chunk<br/>{name: "getUserData", args: {...}}
-    Server->>Server: Parse tool call<br/>arguments
-    Server->>Tool: execute(parsedArgs)
-    Tool->>Database/API: Query/Fetch data
-    Database/API-->>Tool: Return data
-    Tool-->>Server: Return result
-    Server->>Server: Create tool_result<br/>message
-    Server->>LLM Service: Continue chat with<br/>tool_result in history
+    LLM Service->>Server: tool_call chunk<br/>{name: "updateUI", args: {...}}
+    Server->>Server: Check if tool has<br/>server execute
     
-    Note over LLM Service: Model uses result<br/>to generate response
+    Note over Server: No execute function<br/>= client tool
     
-    LLM Service-->>Server: Stream content chunks
-    Server-->>Server: Stream to client
+    Server->>Browser: Forward tool-input-available<br/>chunk via SSE/HTTP
+    Browser->>Browser: onToolCall callback<br/>triggered
+    Browser->>ClientTool: execute(args)
+    ClientTool->>ClientTool: Update UI,<br/>localStorage, etc.
+    ClientTool-->>Browser: Return result
+    Browser->>Server: POST tool result
+    Server->>LLM Service: Add tool_result<br/>to conversation
+    
+    Note over LLM Service: Model uses result<br/>to continue
+    
+    LLM Service-->>Server: Stream response
+    Server-->>Browser: Forward chunks
 ```
+
+## When to Use Client Tools
+
+- **UI Updates**: Show notifications, update forms, toggle visibility
+- **Local Storage**: Save user preferences, cache data
+- **Browser APIs**: Access geolocation, camera, clipboard
+- **State Management**: Update React/Vue/Solid state
+- **Navigation**: Change routes, scroll to sections
 
 ## How It Works
 
-1. **Tool Call Received**: Server receives a `tool_call` chunk from the LLM
-2. **Argument Parsing**: The tool arguments (JSON string) are parsed and validated against the input schema
-3. **Execution**: The tool's `execute` function is called with the parsed arguments
-4. **Result Processing**: The result is:
-   - Validated against the output schema (if defined)
-   - Converted to a tool result message
-   - Added to the conversation history
-5. **Continuation**: The chat continues with the tool result, allowing the LLM to generate a response based on the result
-  
-## Automatic vs. Manual Execution
+1. **Tool Call from LLM**: LLM decides to call a client tool
+2. **Server Detection**: Server sees the tool has no `execute` function
+3. **Client Notification**: Server sends a `tool-input-available` chunk to the browser
+4. **Client Execution**: Browser's `onToolCall` callback is triggered with:
+   - `toolName`: Name of the tool to execute
+   - `input`: Parsed arguments
+5. **Result Return**: Client executes the tool and returns the result
+6. **Server Update**: Result is sent back to the server and added to the conversation
+7. **LLM Continuation**: LLM receives the result and continues the conversation
 
-**Automatic (Default):**
-- Server tools with an `execute` function run automatically
-- Results are added to the conversation immediately
-- No client-side handling required
+## Defining Client Tools
 
-**Manual (Advanced):**
-- You can handle tool calls manually by intercepting the stream
-- Useful for custom orchestration or approval flows
-
-## Server Tool Definition
+Client tools use the same `toolDefinition()` API but with the `.client()` method:
 
 ```typescript
+// tools/definitions.ts - Shared between server and client
 import { toolDefinition } from "@tanstack/ai";
 import { z } from "zod";
 
-const getUserDataDef = toolDefinition({
-  name: "get_user_data",
-  description: "Get user information from the database",
+export const updateUIDef = toolDefinition({
+  name: "update_ui",
+  description: "Update the UI with new information",
   inputSchema: z.object({
-    userId: z.string().describe("The user ID to look up"),
+    message: z.string().describe("Message to display"),
+    type: z.enum(["success", "error", "info"]).describe("Message type"),
   }),
   outputSchema: z.object({
-    name: z.string(),
-    email: z.string().email(),
-    createdAt: z.string(),
+    success: z.boolean(),
   }),
 });
 
-const getUserData = getUserDataDef.server(async ({ userId }) => {
-  // This runs on the server - secure access to database
-  const user = await db.users.findUnique({ where: { id: userId } });
-  return {
-    name: user.name,
-    email: user.email,
-    createdAt: user.createdAt.toISOString(),
-  };
+export const saveToLocalStorageDef = toolDefinition({
+  name: "save_to_local_storage",
+  description: "Save data to browser local storage",
+  inputSchema: z.object({
+    key: z.string().describe("Storage key"),
+    value: z.string().describe("Value to store"),
+  }),
+  outputSchema: z.object({
+    saved: z.boolean(),
+  }),
 });
 ```
 
-## Defining Server Tools
+## Using Client Tools
 
-Server tools use the isomorphic `toolDefinition()` API with the `.server()` method:
+### Server-Side
 
-```typescript
-import { toolDefinition } from "@tanstack/ai";
-import { z } from "zod";
-
-// Step 1: Define the tool schema
-const getUserDataDef = toolDefinition({
-  name: "get_user_data",
-  description: "Get user information from the database",
-  inputSchema: z.object({
-    userId: z.string().describe("The user ID to look up"),
-  }),
-  outputSchema: z.object({
-    name: z.string(),
-    email: z.string().email(),
-    createdAt: z.string(),
-  }),
-});
-
-// Step 2: Create server implementation
-const getUserData = getUserDataDef.server(async ({ userId }) => {
-  // This runs on the server - can access database, APIs, etc.
-  const user = await db.users.findUnique({ where: { id: userId } });
-  return {
-    name: user.name,
-    email: user.email,
-    createdAt: user.createdAt.toISOString(),
-  };
-});
-
-// Example: API call tool
-const searchProductsDef = toolDefinition({
-  name: "search_products",
-  description: "Search for products in the catalog",
-  inputSchema: z.object({
-    query: z.string().describe("Search query"),
-    limit: z.number().optional().describe("Maximum number of results"),
-  }),
-});
-
-const searchProducts = searchProductsDef.server(async ({ query, limit = 10 }) => {
-  const response = await fetch(
-    `https://api.example.com/products?q=${query}&limit=${limit}`,
-    {
-      headers: {
-        Authorization: `Bearer ${process.env.API_KEY}`, // Server-only access
-      },
-    }
-  );
-  return await response.json();
-});
-```
-
-## Using Server Tools
-
-Pass tools to the `chat` method:
+To give the LLM access to client tools, pass the tool definitions (not implementations) to the server when creating the chat:
 
 ```typescript
-import { chat, toStreamResponse } from "@tanstack/ai";
-import { openai } from "@tanstack/ai-openai";
-import { getUserData, searchProducts } from "./tools";
+// api/chat/route.ts
+import { chat, toServerSentEventsStream } from "@tanstack/ai";
+import { openaiText } from "@tanstack/ai-openai";
+import { updateUIDef, saveToLocalStorageDef } from "@/tools/definitions";
 
 export async function POST(request: Request) {
   const { messages } = await request.json();
 
   const stream = chat({
-    adapter: openai(),
+    adapter: openaiText("gpt-4o"),
     messages,
-    model: "gpt-4o",
-    tools: [getUserData, searchProducts],
+    tools: [updateUIDef, saveToLocalStorageDef], // Pass definitions
   });
 
-  return toStreamResponse(stream);
+  return toServerSentEventsStream(stream);
 }
 ```
 
-## Tool Organization Pattern
+### Client-Side
 
-For better organization, define tool schemas and implementations separately:
+Create client implementations with automatic execution and full type safety:
 
 ```typescript
-// tools/definitions.ts
-import { toolDefinition } from "@tanstack/ai";
-import { z } from "zod";
+// app/chat.tsx
+import { useChat, fetchServerSentEvents } from "@tanstack/ai-react";
+import { 
+  clientTools, 
+  createChatClientOptions, 
+  type InferChatMessages 
+} from "@tanstack/ai-client";
+import { updateUIDef, saveToLocalStorageDef } from "@/tools/definitions";
+import { useState } from "react";
 
-export const getUserDataDef = toolDefinition({
-  name: "get_user_data",
-  description: "Get user information",
-  inputSchema: z.object({
-    userId: z.string(),
-  }),
-  outputSchema: z.object({
-    name: z.string(),
-    email: z.string(),
-  }),
-});
+function ChatComponent() {
+  const [notification, setNotification] = useState(null);
 
-export const searchProductsDef = toolDefinition({
-  name: "search_products",
-  description: "Search products",
-  inputSchema: z.object({
-    query: z.string(),
-  }),
-});
+  // Step 1: Create client implementations
+  const updateUI = updateUIDef.client((input) => {
+    // Update React state - fully typed!
+    setNotification({ message: input.message, type: input.type });
+    return { success: true };
+  });
 
-// tools/server.ts
-import { getUserDataDef, searchProductsDef } from "./definitions";
-import { db } from "@/lib/db";
+  const saveToLocalStorage = saveToLocalStorageDef.client((input) => {
+    localStorage.setItem(input.key, input.value);
+    return { saved: true };
+  });
 
-export const getUserData = getUserDataDef.server(async ({ userId }) => {
-  const user = await db.users.findUnique({ where: { id: userId } });
-  return { name: user.name, email: user.email };
-});
+  // Step 2: Create typed tools array (no 'as const' needed!)
+  const tools = clientTools(updateUI, saveToLocalStorage);
 
-export const searchProducts = searchProductsDef.server(async ({ query }) => {
-  const products = await db.products.search(query);
-  return products;
-});
+  const chatOptions = createChatClientOptions({
+    connection: fetchServerSentEvents("/api/chat"),
+    tools,
+  });
 
-// api/chat/route.ts
-import { chat } from "@tanstack/ai";
-import { openai } from "@tanstack/ai-openai";
-import { getUserData, searchProducts } from "@/tools/server";
+  // Step 3: Infer message types for full type safety
+  type ChatMessages = InferChatMessages<typeof chatOptions>;
 
-const stream = chat({
-  adapter: openai(),
-  messages,
-  model: "gpt-4o",
-  tools: [getUserData, searchProducts],
-});
+  const { messages, sendMessage, isLoading } = useChat(chatOptions);
+
+  // Step 4: Render with full type safety
+  return (
+    <div>
+      {messages.map((message) => (
+        <MessageComponent key={message.id} message={message} />
+      ))}
+      {notification && (
+        <div className={`notification ${notification.type}`}>
+          {notification.message}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Messages component with full type safety
+function MessageComponent({ message }: { message: ChatMessages[number] }) {
+  return (
+    <div>
+      {message.parts.map((part) => {
+        if (part.type === "text") {
+          return <p>{part.content}</p>;
+        }
+        
+        if (part.type === "tool-call") {
+          // ✅ part.name is narrowed to specific tool names
+          if (part.name === "update_ui") {
+            // ✅ part.input is typed as { message: string, type: "success" | "error" | "info" }
+            // ✅ part.output is typed as { success: boolean } | undefined
+            return (
+              <div>
+                Tool: {part.name}
+                {part.output && <span>✓ Success</span>}
+              </div>
+            );
+          }
+        }
+      })}
+    </div>
+  );
+}
 ```
 
 ## Automatic Execution
 
-Server tools are automatically executed when the model calls them. The SDK:
+Client tools are **automatically executed** when the model calls them. No manual `onToolCall` callback needed! The flow is:
 
-1. Receives the tool call from the model
-2. Executes the tool's `execute` function
-3. Adds the result to the conversation
-4. Continues the chat with the tool result
+1. LLM calls a client tool
+2. Server sends `tool-input-available` chunk to browser
+3. Client automatically executes the matching tool implementation
+4. Result is sent back to server
+5. Conversation continues with the result
 
-You don't need to manually handle tool execution - it's automatic!
+## Type Safety Benefits
 
-## Error Handling
-
-Tools should handle errors gracefully:
+The isomorphic architecture provides complete end-to-end type safety:
 
 ```typescript
-const getUserDataDef = toolDefinition({
-  name: "get_user_data",
-  description: "Get user information",
+messages.forEach((message) => {
+  message.parts.forEach((part) => {
+    if (part.type === "tool-call" && part.name === "update_ui") {
+      // ✅ TypeScript knows part.name is literally "update_ui"
+      // ✅ part.input is typed as { message: string, type: "success" | "error" | "info" }
+      // ✅ part.output is typed as { success: boolean } | undefined
+      
+      console.log(part.input.message); // ✅ Fully typed!
+      
+      if (part.output) {
+        console.log(part.output.success); // ✅ Fully typed!
+      }
+    }
+  });
+});
+```
+
+## Tool States
+Client tools go through a small set of observable lifecycle states you can surface in the UI to indicate progress:
+
+- `awaiting-input` — the model intends to call the tool but arguments haven't arrived yet.
+- `input-streaming` — the model is streaming the tool arguments (partial input may be available).
+- `input-complete` — all arguments have been received and the tool is executing.
+- `completed` — the tool finished; part.output contains the result (or error details).
+
+Use these states to show loading indicators, streaming progress, and final success/error feedback. The example below maps each state to a simple UI message.
+
+```typescript
+function ToolCallDisplay({ part }: { part: ToolCallPart }) {
+  if (part.state === "awaiting-input") {
+    return <div>🔄 Waiting for arguments...</div>;
+  }
+  
+  if (part.state === "input-streaming") {
+    return <div>📥 Receiving arguments...</div>;
+  }
+  
+  if (part.state === "input-complete") {
+    return <div>✓ Arguments received, executing...</div>;
+  }
+  
+  if (part.output) {
+    return <div>✅ Tool completed successfully</div>;
+  }
+  
+  return null;
+}
+```
+
+## Hybrid Tools
+
+Tools can be implemented for both server and client, enabling flexible execution:
+
+```typescript
+// Define once
+const addToCartDef = toolDefinition({
+  name: "add_to_cart",
+  description: "Add item to shopping cart",
   inputSchema: z.object({
-    userId: z.string(),
+    itemId: z.string(),
+    quantity: z.number(),
   }),
   outputSchema: z.object({
-    name: z.string().optional(),
-    email: z.string().optional(),
-    error: z.string().optional(),
+    success: z.boolean(),
+    cartId: z.string(),
   }),
 });
 
-const getUserData = getUserDataDef.server(async ({ userId }) => {
-  try {
-    const user = await db.users.findUnique({ where: { id: userId } });
-    if (!user) {
-      return { error: "User not found" };
-    }
-    return { name: user.name, email: user.email };
-  } catch (error) {
-    return { error: "Failed to fetch user data" };
-  }
+// Server implementation - Store in database
+const addToCartServer = addToCartDef.server(async (input) => {
+  const cart = await db.carts.create({
+    data: { itemId: input.itemId, quantity: input.quantity },
+  });
+  return { success: true, cartId: cart.id };
 });
+
+// Client implementation - Update local wishlist
+const addToCartClient = addToCartDef.client((input) => {
+  const wishlist = JSON.parse(localStorage.getItem("wishlist") || "[]");
+  wishlist.push(input.itemId);
+  localStorage.setItem("wishlist", JSON.stringify(wishlist));
+  return { success: true, cartId: "local" };
+});
+
+// Server: Pass definition for client execution
+chat({ adapter: openaiText('gpt-4o'), messages: [], tools: [addToCartDef] }); // Client will execute
+
+// Or pass server implementation for server execution
+chat({ adapter: openaiText('gpt-4o'), messages: [], tools: [addToCartServer] }); // Server will execute
 ```
-
-## Using JSON Schema
-
-If you have existing JSON Schema definitions or prefer not to use Zod, you can define tool schemas using raw JSON Schema objects:
-
-```typescript
-import { toolDefinition } from "@tanstack/ai";
-import type { JSONSchema } from "@tanstack/ai";
-
-const inputSchema: JSONSchema = {
-  type: "object",
-  properties: {
-    userId: {
-      type: "string",
-      description: "The user ID to look up",
-    },
-  },
-  required: ["userId"],
-};
-
-const outputSchema: JSONSchema = {
-  type: "object",
-  properties: {
-    name: { type: "string" },
-    email: { type: "string" },
-  },
-  required: ["name", "email"],
-};
-
-const getUserDataDef = toolDefinition({
-  name: "get_user_data",
-  description: "Get user information from the database",
-  inputSchema,
-  outputSchema,
-});
-
-// When using JSON Schema, args is typed as `any`
-const getUserData = getUserDataDef.server(async (args) => {
-  const user = await db.users.findUnique({ where: { id: args.userId } });
-  return { name: user.name, email: user.email };
-});
-```
-
-> **Note:** JSON Schema tools skip runtime validation. Zod schemas are recommended for full type safety and validation.
 
 ## Best Practices
 
-1. **Keep tools focused** - Each tool should do one thing well
-2. **Validate inputs** - Use Zod schemas to ensure type safety (JSON Schema skips validation)
-3. **Handle errors** - Return meaningful error messages
-4. **Use descriptions** - Clear descriptions help the model use tools correctly
-5. **Secure sensitive operations** - Never expose API keys or secrets to the client
+- **Keep client tools simple** - Since client tools run in the browser, avoid heavy computations or large dependencies that could bloat your bundle size.
+- **Handle errors gracefully** - Define clear error handling in your tool implementations and return meaningful error messages in your output schema.
+- **Update UI reactively** - Use your framework's state management (eg. React/Vue/Solid) to update the UI in response to tool executions.
+- **Secure sensitive data** - Never store sensitive data (like API keys or personal info) in local storage or expose it via client tools.
+- **Provide feedback** - Use tool states to inform users about ongoing operations and results of client tool executions (loading spinners, success messages, error alerts).
+- **Type everything** - Leverage TypeScript and Zod schemas for full type safety from tool definitions to implementations to usage.
+
+## Common Use Cases
+
+- **UI Updates** - Show notifications, update forms, toggle visibility
+- **Local Storage** - Save user preferences, cache data
+- **Browser APIs** - Access geolocation, camera, clipboard
+- **State Management** - Update React/Vue/Solid state
+- **Navigation** - Change routes, scroll to sections
+- **Analytics** - Track user interactions
 
 ## Next Steps
 
-- [Client Tools](./client-tools) - Learn about client-side tool execution
+- [How Tools Work](./tools) - Deep dive into the tool architecture
+- [Server Tools](./server-tools) - Learn about server-side tool execution
 - [Tool Approval Flow](./tool-approval) - Add approval workflows for sensitive operations
+
