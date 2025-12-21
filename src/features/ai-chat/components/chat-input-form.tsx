@@ -1,7 +1,7 @@
 import { AlertTriangle, Brain, Send, Square } from "lucide-react";
 import { useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
 	Tooltip,
 	TooltipContent,
@@ -27,26 +27,33 @@ export function ChatInputForm({
 	isThinkingEnabled,
 	onThinkingToggle,
 }: ChatInputFormProps) {
-	const inputRef = useRef<HTMLInputElement | null>(null);
+	const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 	const isOllamaRunning = useIsOllamaRunning();
 
 	const handleSubmit = useCallback(
-		async (e: React.FormEvent) => {
-			e.preventDefault();
+		async (e?: React.FormEvent) => {
+			e?.preventDefault();
 			if (isLoading || !isOllamaRunning) return;
 
-			const rawValue = inputRef.current?.value ?? "";
+			const rawValue = textareaRef.current?.value ?? "";
 			const content = rawValue.trim();
 			if (!content) return;
 
 			await onSubmit(content);
 
-			if (inputRef.current) {
-				inputRef.current.value = "";
+			if (textareaRef.current) {
+				textareaRef.current.value = "";
 			}
 		},
 		[isLoading, onSubmit, isOllamaRunning],
 	);
+
+	const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+		if (e.key === "Enter" && !e.shiftKey) {
+			e.preventDefault();
+			handleSubmit();
+		}
+	};
 
 	return (
 		<form onSubmit={handleSubmit} className="flex gap-2 items-end p-1">
@@ -81,16 +88,17 @@ export function ChatInputForm({
 			</Tooltip>
 
 			<div className="relative flex-1">
-				<Input
-					type="text"
-					ref={inputRef}
+				<Textarea
+					ref={textareaRef}
 					placeholder={
 						isOllamaRunning ? "Ask something..." : "Ollama is not running..."
 					}
-					className={`pr-10 transition-colors duration-200 ${
+					className={`min-h-[40px] max-h-[300px] pr-10 transition-colors duration-200 resize-none ${
 						isThinkingEnabled ? "border-primary ring-1 ring-primary/20" : ""
 					}`}
 					disabled={isLoading || !isOllamaRunning}
+					onKeyDown={handleKeyDown}
+					rows={1}
 				/>
 				{!isOllamaRunning && (
 					<div className="absolute right-3 top-1/2 -translate-y-1/2 text-amber-500">

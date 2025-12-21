@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import type { ChildProcess } from "child_process";
 import { exec, spawn } from "child_process";
 import fs from "fs/promises";
 import os from "os";
@@ -8,71 +9,99 @@ import { env } from "@/env";
 
 const execAsync = promisify(exec);
 
-interface OllamaArgs {
-	data?: { customPath?: string | null };
+type OllamaInput = {
+  customPath?: string | null;
+};
+
+export const checkOllamaStatus = createServerFn({ method: "POST" })
+  .inputValidator((data?: OllamaInput) => data)
+  .handler(({ data }) =>
+    checkOllamaStatusImpl(
+      {
+        fetchFn: fetch,
+        baseUrl: env.OLLAMA_BASE_URL || "http://127.0.0.1:11434",
+        getInstallation: getOllamaInstallation,
+      },
+      data,
+    ),
+  );
+
+
+export const startOllama = createServerFn({ method: "POST" })
+  .inputValidator((data?: OllamaInput) => data)
+  .handler(({ data }) =>
+    startOllamaImpl(
+      {
+        spawnFn: spawn,
+        getInstallation: getOllamaInstallation,
+        logError: console.error,
+      },
+      data,
+    ),
+  );
+
+
+
+export async function checkOllamaStatusImpl(
+  deps: {
+    fetchFn: typeof fetch;
+    baseUrl: string;
+    getInstallation: (customPath?: string | null) => Promise<{ exists: boolean; path: string | null }>;
+  },
+  data?: OllamaInput,
+) {
+  const { fetchFn, baseUrl, getInstallation } = deps;
+
+  try {
+    const response = await fetchFn(`${baseUrl}/api/tags`);
+    if (response.ok) {
+      const json = (await response.json()) as { models: Array<{ name: string }> };
+      return {
+        status: "running" as const,
+        models: json.models.map((m) => m.name),
+        baseUrl,
+      };
+    }
+  } catch {}
+
+  const installation = await getInstallation(data?.customPath);
+  return {
+    status: installation.exists ? ("stopped" as const) : ("not-installed" as const),
+    models: [],
+    baseUrl,
+    path: installation.path,
+  };
 }
 
-export const checkOllamaStatus = createServerFn({ method: "POST" }).handler(
-	async (args: OllamaArgs) => {
-		const data = args.data;
-		const baseUrl = env.OLLAMA_BASE_URL || "http://127.0.0.1:11434";
-		try {
-			const response = await fetch(`${baseUrl}/api/tags`);
-			if (response.ok) {
-				const data = (await response.json()) as {
-					models: Array<{ name: string }>;
-				};
-				return {
-					status: "running" as const,
-					models: data.models.map((m) => m.name),
-					baseUrl,
-				};
-			}
-		} catch (_e) {
-			// Not running
-		}
+export async function startOllamaImpl(
+  deps: {
+    spawnFn: (
+      command: string,
+      args: readonly string[],
+      options: { detached: boolean; stdio: "ignore" }
+    ) => Pick<ChildProcess, "unref">;
+    getInstallation: (
+      customPath?: string | null
+    ) => Promise<{ exists: boolean; path: string | null }>;
+    logError?: (...args: any[]) => void;
+  },
+  data?: OllamaInput,
+) {
+  const installation = await deps.getInstallation(data?.customPath);
 
-		// If not running, check if installed
-		const installation = await getOllamaInstallation(data?.customPath);
-		return {
-			status: installation.exists
-				? ("stopped" as const)
-				: ("not-installed" as const),
-			models: [],
-			baseUrl,
-			path: installation.path,
-		};
-	},
-);
+  if (!installation.exists) {
+    throw new Error("Ollama is not installed");
+  }
 
-export const startOllama = createServerFn({ method: "POST" }).handler(
-	async (args: OllamaArgs) => {
-		const data = args.data;
-		const installation = await getOllamaInstallation(data?.customPath);
-
-		if (!installation.exists) {
-			throw new Error("Ollama is not installed");
-		}
-
-		try {
-			// On Windows, we can use the executable path or just 'ollama' if in PATH
-			const cmd = installation.path || "ollama";
-
-			// Spawn detached process so it keeps running
-			const child = spawn(cmd, ["serve"], {
-				detached: true,
-				stdio: "ignore",
-			});
-
-			child.unref();
-
-			return { success: true };
-		} catch (e) {
-			console.error("Failed to start Ollama:", e);
-			return { success: false, error: (e as Error).message };
-		}
-	},
-);
+  try {
+    const child = deps.spawnFn(installation.path!, ["serve"], { detached: true, stdio: "ignore" });
+    child.unref();
+    return { success: true as const };
+  } catch (e) {
+    deps.logError?.("Failed to start Ollama:", e);
+    return { success: false as const, error: (e as Error).message };
+  }
+}
 
 async function getOllamaInstallation(customPath?: string | null) {
 	if (customPath) {

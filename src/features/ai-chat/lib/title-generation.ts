@@ -5,6 +5,18 @@
  * This runs independently of the main chat flow to not block the user experience.
  */
 
+import { stripThinkPrefix } from "@/features/ai-chat/lib/chat-utils";
+
+/**
+ * Clean a user message for title generation by removing thinking prefixes.
+ *
+ * @param message - The raw user message
+ * @returns The cleaned message with /think or /no_think prefixes removed
+ */
+export function cleanMessageForTitle(message: string): string {
+	return stripThinkPrefix(message).trim();
+}
+
 /**
  * Triggers AI title generation in the background.
  * Fire-and-forget - does not block the chat flow.
@@ -20,9 +32,8 @@ export async function triggerTitleGeneration(
 ): Promise<void> {
 	try {
 		// Strip thinking prefix for title generation
-		const cleanMessage = userMessage
-			.replace(/^\/(think|no_think)\s+/, "")
-			.trim();
+		const cleanMessage = cleanMessageForTitle(userMessage);
+
 
 		await fetch("/api/generate-title", {
 			method: "POST",

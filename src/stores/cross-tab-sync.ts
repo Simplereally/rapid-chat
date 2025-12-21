@@ -137,15 +137,16 @@ export function cleanupCrossTabSync(): void {
 
 // Helper functions for serialization using JSON for reliable cross-tab transmission
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function serializeMessages(messages: UIMessage[]): any[] {
+export function serializeMessages(messages: UIMessage[]): any[] {
 	return JSON.parse(JSON.stringify(messages));
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function deserializeMessages(messages: any[]): UIMessage[] {
+export function deserializeMessages(messages: any[]): UIMessage[] {
 	return messages.map((msg) => ({
 		...msg,
 		role: msg.role as "user" | "assistant",
 		createdAt: msg.createdAt ? new Date(msg.createdAt) : undefined,
 	})) as UIMessage[];
 }
+
