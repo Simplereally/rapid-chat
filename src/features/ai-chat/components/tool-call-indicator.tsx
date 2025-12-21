@@ -11,6 +11,7 @@ import {
 	Loader2,
 	Search,
 	Terminal,
+	XCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ToolName } from "@/tools/client-index";
@@ -20,6 +21,12 @@ interface ToolCallIndicatorProps {
 	args: Record<string, unknown>;
 	state?: string; // Tool call state for approval handling
 	output?: unknown;
+	/** Whether the tool was denied by the user */
+	approval?: {
+		id: string;
+		needsApproval: boolean;
+		approved?: boolean;
+	};
 }
 
 /**
@@ -34,27 +41,36 @@ export function ToolCallIndicator({
 	args,
 	state,
 	output,
+	approval,
 }: ToolCallIndicatorProps) {
+	// Check if the tool was denied
+	const wasDenied =
+		state === "approval-responded" && approval?.approved === false;
+
 	// Format the display text based on tool name
-	const displayText = getToolDisplayText(toolName, args, state, output);
+	const displayText = getToolDisplayText(toolName, args, state, output, wasDenied);
 	const isApprovalRequired = state === "approval-requested";
-	const isFinished = output !== undefined;
+	const isFinished = output !== undefined || wasDenied;
 	const Icon = getToolIcon(toolName);
-	const StatusIcon = isFinished
-		? CheckCircle2
-		: isApprovalRequired
-			? AlertTriangle
-			: Loader2;
+	const StatusIcon = wasDenied
+		? XCircle
+		: isFinished
+			? CheckCircle2
+			: isApprovalRequired
+				? AlertTriangle
+				: Loader2;
 
 	return (
 		<div
 			className={cn(
 				"flex items-center gap-2 text-sm py-1 transition-colors duration-200",
-				isApprovalRequired
-					? "text-warning"
-					: isFinished
-						? "text-green-500/80"
-						: "text-muted-foreground/60",
+				wasDenied
+					? "text-destructive/70"
+					: isApprovalRequired
+						? "text-warning"
+						: isFinished
+							? "text-green-500/80"
+							: "text-muted-foreground/60",
 			)}
 		>
 			<StatusIcon
@@ -114,8 +130,14 @@ function getToolDisplayText(
 	args: Record<string, unknown>,
 	state?: string,
 	output?: unknown,
+	wasDenied?: boolean,
 ): string {
-	// Handle approval requests first
+	// Handle denied tools first
+	if (wasDenied) {
+		return getDeniedText(toolName, args);
+	}
+
+	// Handle approval requests
 	if (state === "approval-requested") {
 		return getApprovalRequestText(toolName, args);
 	}
@@ -332,5 +354,39 @@ function getApprovalRequestText(
 
 		default:
 			return `⚠️ Approval needed for ${toolName}`;
+	}
+}
+
+/**
+ * Get text for denied tool operations
+ */
+function getDeniedText(
+	toolName: ToolName,
+	args: Record<string, unknown>,
+): string {
+	switch (toolName) {
+		case "bash": {
+			const command =
+				typeof args.command === "string" ? args.command : "command";
+			const shortCommand =
+				command.length > 40 ? `${command.slice(0, 37)}...` : command;
+			return `Denied: run "${shortCommand}"`;
+		}
+
+		case "write": {
+			const path = typeof args.path === "string" ? args.path : "file";
+			const shortPath = path.length > 30 ? `...${path.slice(-27)}` : path;
+			return `Denied: write "${shortPath}"`;
+		}
+
+		case "edit":
+		case "multi_edit": {
+			const path = typeof args.path === "string" ? args.path : "file";
+			const shortPath = path.length > 30 ? `...${path.slice(-27)}` : path;
+			return `Denied: edit "${shortPath}"`;
+		}
+
+		default:
+			return `Denied: ${toolName}`;
 	}
 }

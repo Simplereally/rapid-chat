@@ -306,70 +306,90 @@ export function ChatMessage({
 											findToolResultForCall(message.parsedParts, toolPart.id);
 
 										// Special handling for bash - always show terminal output
-										if (toolPart.name === "bash") {
-											const command =
-												typeof parsedArgs.command === "string"
-													? parsedArgs.command
-													: "";
-											const isApprovalRequired =
-												toolPart.state === "approval-requested";
-											const isExecuting =
-												effectiveOutput === undefined && !isApprovalRequired;
-											const approvalId = toolPart.approval?.id;
+								if (toolPart.name === "bash") {
+									const command =
+										typeof parsedArgs.command === "string"
+											? parsedArgs.command
+											: "";
+									const isApprovalRequired =
+										toolPart.state === "approval-requested";
+									const approvalId = toolPart.approval?.id;
 
-											// Parse output if available
-											let parsedOutput:
-												| {
-														success: boolean;
-														exitCode: number | null;
-														stdout: string;
-														stderr: string;
-														timedOut: boolean;
-														executionTime: number;
-												  }
-												| undefined;
+									// Check if this command was denied
+									const wasDenied =
+										toolPart.state === "approval-responded" &&
+										toolPart.approval?.approved === false;
 
-											if (effectiveOutput !== undefined) {
-												try {
-													if (typeof effectiveOutput === "string") {
-														parsedOutput = JSON.parse(effectiveOutput);
-													} else {
-														parsedOutput =
-															effectiveOutput as typeof parsedOutput;
-													}
-												} catch {
-													// Fallback if output is just a string
-													parsedOutput = {
-														success: true,
-														exitCode: 0,
-														stdout: String(effectiveOutput),
-														stderr: "",
-														timedOut: false,
-														executionTime: 0,
-													};
-												}
+									// If denied, show ToolCallIndicator instead of TerminalOutput
+									if (wasDenied) {
+										return (
+											<ToolCallIndicator
+												key={`${message.id}-bash-denied-${toolPart.id}`}
+												toolName="bash"
+												args={parsedArgs}
+												state={toolPart.state}
+												output={effectiveOutput}
+												approval={toolPart.approval}
+											/>
+										);
+									}
+
+									const isExecuting =
+										effectiveOutput === undefined && !isApprovalRequired;
+
+									// Parse output if available (only for non-denied outputs)
+									let parsedOutput:
+										| {
+												success: boolean;
+												exitCode: number | null;
+												stdout: string;
+												stderr: string;
+												timedOut: boolean;
+												executionTime: number;
+										  }
+										| undefined;
+
+									if (effectiveOutput !== undefined) {
+										try {
+											if (typeof effectiveOutput === "string") {
+												parsedOutput = JSON.parse(effectiveOutput);
+											} else {
+												parsedOutput =
+													effectiveOutput as typeof parsedOutput;
 											}
-
-											return (
-												<TerminalOutput
-													key={`${message.id}-bash-${toolPart.id}`}
-													command={command}
-													output={parsedOutput}
-													isExecuting={isExecuting}
-													isApprovalRequired={isApprovalRequired}
-													onApprove={
-														approvalId && onApproveToolCall
-															? () => onApproveToolCall(approvalId)
-															: undefined
-													}
-													onDeny={
-														approvalId && onDenyToolCall
-															? () => onDenyToolCall(approvalId)
-															: undefined
-													}
-												/>
-											);
+										} catch {
+											// Fallback if output is just a string
+											parsedOutput = {
+												success: true,
+												exitCode: 0,
+												stdout: String(effectiveOutput),
+												stderr: "",
+												timedOut: false,
+												executionTime: 0,
+											};
 										}
+									}
+
+									return (
+										<TerminalOutput
+											key={`${message.id}-bash-${toolPart.id}`}
+											command={command}
+											output={parsedOutput}
+											isExecuting={isExecuting}
+											isApprovalRequired={isApprovalRequired}
+											onApprove={
+												approvalId && onApproveToolCall
+													? () => onApproveToolCall(approvalId)
+													: undefined
+											}
+											onDeny={
+												approvalId && onDenyToolCall
+													? () => onDenyToolCall(approvalId)
+													: undefined
+											}
+										/>
+									);
+								}
 
 										// For other tools, always show indicator
 										// If approval is required and not yet approved, show approval card
@@ -406,6 +426,7 @@ export function ChatMessage({
 												args={parsedArgs}
 												state={toolPart.state}
 												output={effectiveOutput}
+												approval={toolPart.approval}
 											/>
 										);
 									}

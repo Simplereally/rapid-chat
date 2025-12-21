@@ -604,14 +604,7 @@ export const useChatClientStore = create<ChatStore>()(
 					response,
 				);
 
-				if (!response.approved) {
-					// If denied, just mark as denied and let the library handle it
-					await clientState.client.addToolApprovalResponse(response);
-					return;
-				}
-
-				// For approved tools, we need to manually execute the client tool
-				// because TanStack AI doesn't auto-execute client tools for approval-required tools
+				// For both approval and denial, we need to find the matching tool call
 				const messages = clientState.messages;
 
 				// Find the tool call part that matches this approval
@@ -652,6 +645,35 @@ export const useChatClientStore = create<ChatStore>()(
 					return;
 				}
 
+				// Handle denial - add a tool result indicating rejection so the LLM knows
+				if (!response.approved) {
+					console.log(
+						`[Tool Approval] Tool denied by user: ${matchedToolCall.toolName}`,
+					);
+
+					// Add a denial result so the LLM understands what happened
+					await clientState.client.addToolResult({
+						toolCallId: matchedToolCall.toolCallId,
+						tool: matchedToolCall.toolName,
+						output: {
+							success: false,
+							denied: true,
+							message: `User denied execution of ${matchedToolCall.toolName}. The user chose not to allow this operation. Please acknowledge the denial and ask if they want to proceed differently.`,
+						},
+						state: "output-available", // Use output-available so it's treated as a completed tool
+					});
+
+					// Mark approval as responded to trigger continuation
+					await clientState.client.addToolApprovalResponse(response);
+
+					console.log(
+						`[Tool Approval] Denial processed, agentic loop should continue`,
+					);
+					return;
+				}
+
+				// For approved tools, we need to manually execute the client tool
+				// because TanStack AI doesn't auto-execute client tools for approval-required tools
 				console.log(
 					`[Tool Approval] Executing client tool: ${matchedToolCall.toolName}`,
 				);
