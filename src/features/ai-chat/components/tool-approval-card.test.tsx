@@ -54,7 +54,7 @@ describe("ToolApprovalCard", () => {
 	});
 
 	describe("bash tool", () => {
-		test("displays command in details", () => {
+		test("displays command inline", () => {
 			const html = renderToStaticMarkup(
 				<ToolApprovalCard
 					toolName="bash"
@@ -65,9 +65,8 @@ describe("ToolApprovalCard", () => {
 				/>,
 			);
 
-			expect(html).toContain("Execute Shell Command");
+			expect(html).toContain("Execute command");
 			expect(html).toContain("npm run build");
-			expect(html).toContain("Command");
 		});
 
 		test("displays cwd when provided", () => {
@@ -81,28 +80,13 @@ describe("ToolApprovalCard", () => {
 				/>,
 			);
 
-			expect(html).toContain("Directory");
+			expect(html).toContain("in");
 			expect(html).toContain("/home/user/project");
-		});
-
-		test("displays timeout when provided", () => {
-			const html = renderToStaticMarkup(
-				<ToolApprovalCard
-					toolName="bash"
-					args={{ command: "long-process", timeout: 60000 }}
-					approvalId="approval-3"
-					onApprove={() => {}}
-					onDeny={() => {}}
-				/>,
-			);
-
-			expect(html).toContain("Timeout");
-			expect(html).toContain("60000ms");
 		});
 	});
 
 	describe("write tool", () => {
-		test("displays file path", () => {
+		test("displays inline description with file path", () => {
 			const html = renderToStaticMarkup(
 				<ToolApprovalCard
 					toolName="write"
@@ -113,28 +97,12 @@ describe("ToolApprovalCard", () => {
 				/>,
 			);
 
-			expect(html).toContain("Write File");
+			expect(html).toContain("Write to file");
 			expect(html).toContain("/src/components/Button.tsx");
-			expect(html).toContain("Path");
+			expect(html).toContain("with contents");
 		});
 
-		test("displays content stats", () => {
-			const multiLineContent = "line 1\nline 2\nline 3";
-			const html = renderToStaticMarkup(
-				<ToolApprovalCard
-					toolName="write"
-					args={{ path: "/test.txt", content: multiLineContent }}
-					approvalId="approval-5"
-					onApprove={() => {}}
-					onDeny={() => {}}
-				/>,
-			);
-
-			expect(html).toContain("Content");
-			expect(html).toContain("3 lines");
-		});
-
-		test("displays content preview", () => {
+		test("displays file content in code block", () => {
 			const html = renderToStaticMarkup(
 				<ToolApprovalCard
 					toolName="write"
@@ -145,11 +113,10 @@ describe("ToolApprovalCard", () => {
 				/>,
 			);
 
-			expect(html).toContain("Preview");
 			expect(html).toContain("Hello, World!");
 		});
 
-		test("truncates long content in preview", () => {
+		test("shows full content without truncation for security", () => {
 			const longContent = "a".repeat(300);
 			const html = renderToStaticMarkup(
 				<ToolApprovalCard
@@ -161,28 +128,8 @@ describe("ToolApprovalCard", () => {
 				/>,
 			);
 
-			expect(html).toContain("...");
-			// Should not contain the full 300 character string
-			expect(html).not.toContain(longContent);
-		});
-
-		test("displays createDirectories option", () => {
-			const html = renderToStaticMarkup(
-				<ToolApprovalCard
-					toolName="write"
-					args={{
-						path: "/new/nested/path/file.txt",
-						content: "data",
-						createDirectories: true,
-					}}
-					approvalId="approval-8"
-					onApprove={() => {}}
-					onDeny={() => {}}
-				/>,
-			);
-
-			expect(html).toContain("Options");
-			expect(html).toContain("Create directories if needed");
+			// Full content should be shown for security/transparency
+			expect(html).toContain(longContent);
 		});
 	});
 
@@ -193,8 +140,8 @@ describe("ToolApprovalCard", () => {
 					toolName="edit"
 					args={{
 						path: "/src/utils.ts",
-						oldString: "const old = 1;",
-						newString: "const new = 2;",
+						oldString: "constOld",
+						newString: "constNew",
 					}}
 					approvalId="approval-9"
 					onApprove={() => {}}
@@ -202,15 +149,16 @@ describe("ToolApprovalCard", () => {
 				/>,
 			);
 
-			expect(html).toContain("Edit File");
+			expect(html).toContain("Edit");
 			expect(html).toContain("/src/utils.ts");
 			expect(html).toContain("Find");
-			expect(html).toContain("const old = 1;");
-			expect(html).toContain("Replace");
-			expect(html).toContain("const new = 2;");
+			// prism tokenizes code, so check for individual text tokens
+			expect(html).toContain("constOld");
+			expect(html).toContain("Replace with");
+			expect(html).toContain("constNew");
 		});
 
-		test("truncates long strings", () => {
+		test("shows full content without truncation for security", () => {
 			const longOldString = "x".repeat(200);
 			const html = renderToStaticMarkup(
 				<ToolApprovalCard
@@ -226,8 +174,8 @@ describe("ToolApprovalCard", () => {
 				/>,
 			);
 
-			expect(html).toContain("...");
-			expect(html).not.toContain(longOldString);
+			// Full content should be shown for security/transparency
+			expect(html).toContain(longOldString);
 		});
 	});
 
@@ -250,20 +198,20 @@ describe("ToolApprovalCard", () => {
 				/>,
 			);
 
-			expect(html).toContain("Batch Edit File");
+			expect(html).toContain("Batch edit");
 			expect(html).toContain("/src/large-file.ts");
 			expect(html).toContain("3 replacements");
 		});
 
-		test("shows preview of first edits", () => {
+		test("shows all edits with find and replace labels", () => {
 			const html = renderToStaticMarkup(
 				<ToolApprovalCard
 					toolName="multi_edit"
 					args={{
 						path: "/file.ts",
 						edits: [
-							{ oldString: "first edit", newString: "new first" },
-							{ oldString: "second edit", newString: "new second" },
+							{ oldString: "firstEdit", newString: "newFirst" },
+							{ oldString: "secondEdit", newString: "newSecond" },
 						],
 					}}
 					approvalId="approval-12"
@@ -272,34 +220,11 @@ describe("ToolApprovalCard", () => {
 				/>,
 			);
 
-			expect(html).toContain("Edit 1");
-			expect(html).toContain("first edit");
-			expect(html).toContain("Edit 2");
-			expect(html).toContain("second edit");
-		});
-
-		test("shows additional edits count when more than 2", () => {
-			const html = renderToStaticMarkup(
-				<ToolApprovalCard
-					toolName="multi_edit"
-					args={{
-						path: "/file.ts",
-						edits: [
-							{ oldString: "1", newString: "a" },
-							{ oldString: "2", newString: "b" },
-							{ oldString: "3", newString: "c" },
-							{ oldString: "4", newString: "d" },
-							{ oldString: "5", newString: "e" },
-						],
-					}}
-					approvalId="approval-13"
-					onApprove={() => {}}
-					onDeny={() => {}}
-				/>,
-			);
-
-			expect(html).toContain("5 replacements");
-			expect(html).toContain("... and 3 more edits");
+			expect(html).toContain("Find");
+			expect(html).toContain("firstEdit");
+			expect(html).toContain("Replace");
+			expect(html).toContain("newFirst");
+			expect(html).toContain("secondEdit");
 		});
 
 		test("handles single edit count grammar", () => {
@@ -333,15 +258,15 @@ describe("ToolApprovalCard", () => {
 				/>,
 			);
 
-			expect(html).toContain("Approve custom_tool");
-			expect(html).toContain("This tool requires your approval");
+			expect(html).toContain("Approve");
+			expect(html).toContain("custom_tool");
 			expect(html).toContain("param1");
 			expect(html).toContain("value1");
 			expect(html).toContain("param2");
 			expect(html).toContain("42");
 		});
 
-		test("truncates args list when more than 5 params", () => {
+		test("truncates args list when more than 4 params", () => {
 			const html = renderToStaticMarkup(
 				<ToolApprovalCard
 					toolName="many_params_tool"
@@ -360,7 +285,14 @@ describe("ToolApprovalCard", () => {
 				/>,
 			);
 
-			expect(html).toContain("... and 2 more parameters");
+			// Should only show first 4 params
+			expect(html).toContain("a");
+			expect(html).toContain("b");
+			expect(html).toContain("c");
+			expect(html).toContain("d");
+			// e, f, g should not appear
+			expect(html).not.toContain(">e<");
+			expect(html).not.toContain(">f<");
 		});
 	});
 
@@ -424,7 +356,7 @@ describe("ToolApprovalCard", () => {
 				/>,
 			);
 
-			expect(html).toContain("Write File");
+			expect(html).toContain("Write to file");
 			expect(html).toContain("unknown path");
 		});
 
@@ -459,9 +391,9 @@ describe("ToolApprovalCard", () => {
 				/>,
 			);
 
-			expect(html).toContain("Write File");
-			// Should show 1 line (empty string split produces 1 element)
-			expect(html).toContain("1 line");
+			expect(html).toContain("Write to file");
+			// Should still render without crashing
+			expect(html).toContain("with contents");
 		});
 
 		test("handles empty edits array in multi_edit", () => {
@@ -475,7 +407,7 @@ describe("ToolApprovalCard", () => {
 				/>,
 			);
 
-			expect(html).toContain("Batch Edit File");
+			expect(html).toContain("Batch edit");
 			expect(html).toContain("0 replacements");
 		});
 	});

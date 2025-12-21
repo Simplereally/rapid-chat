@@ -1,4 +1,34 @@
+import type { ReactNode } from "react";
 import type { UIMessage } from "@tanstack/ai-react";
+
+// ===================================
+// Tool Display Types
+// ===================================
+
+/**
+ * A single detail row for tool display (e.g., "Command: ls -la" or "Path: /src/file.ts")
+ */
+export interface ToolDetail {
+	label: string;
+	value: string;
+	isCode?: boolean;
+}
+
+/**
+ * Complete display information for a tool approval card.
+ * Contains all UI-relevant data for rendering the approval interface.
+ */
+export interface ToolDisplayInfo {
+	icon: ReactNode;
+	title: string;
+	description: string;
+	details: ToolDetail[];
+	variant: "warning" | "danger";
+}
+
+// ===================================
+// Message Types
+// ===================================
 
 /**
  * Extended message part with parsed thinking content.
