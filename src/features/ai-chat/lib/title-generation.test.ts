@@ -16,6 +16,18 @@ describe("title-generation", () => {
 				);
 			});
 
+			test("removes /THINK prefix (case-insensitive)", () => {
+				expect(cleanMessageForTitle("/THINK Hello, world!")).toBe(
+					"Hello, world!",
+				);
+			});
+
+			test("removes /No_Think prefix (case-insensitive)", () => {
+				expect(cleanMessageForTitle("/No_Think Hello, world!")).toBe(
+					"Hello, world!",
+				);
+			});
+
 			test("handles /think with extra whitespace", () => {
 				expect(cleanMessageForTitle("/think   Multiple spaces")).toBe(
 					"Multiple spaces",

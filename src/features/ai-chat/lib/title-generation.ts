@@ -5,6 +5,8 @@
  * This runs independently of the main chat flow to not block the user experience.
  */
 
+import { stripThinkPrefix } from "@/features/ai-chat/lib/chat-utils";
+
 /**
  * Clean a user message for title generation by removing thinking prefixes.
  *
@@ -12,7 +14,7 @@
  * @returns The cleaned message with /think or /no_think prefixes removed
  */
 export function cleanMessageForTitle(message: string): string {
-	return message.replace(/^\/(think|no_think)\s+/, "").trim();
+	return stripThinkPrefix(message).trim();
 }
 
 /**

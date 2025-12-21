@@ -54,6 +54,7 @@ export function getToolIcon(toolName: ToolName | string): ReactNode {
 		case "multi_edit":
 			return createElement(Edit2, { className: ICON_CLASS });
 		case "read":
+		case "ls":
 			return createElement(FileText, { className: ICON_CLASS });
 		case "web_search":
 			return createElement(Globe, { className: ICON_CLASS });

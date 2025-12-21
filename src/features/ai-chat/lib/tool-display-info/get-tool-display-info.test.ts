@@ -45,6 +45,16 @@ describe("get-tool-display-info", () => {
 			expect(icon).toBeTruthy();
 		});
 
+		test("returns FileText icon for read", () => {
+			const icon = getToolIcon("read");
+			expect(icon).toBeTruthy();
+		});
+
+		test("returns FileText icon for ls", () => {
+			const icon = getToolIcon("ls");
+			expect(icon).toBeTruthy();
+		});
+
 		test("returns AlertTriangle icon for unknown tools", () => {
 			const icon = getToolIcon("unknown");
 			expect(icon).toBeTruthy();

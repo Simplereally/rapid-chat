@@ -16,7 +16,7 @@ export interface ToolDetail {
 
 /**
  * Complete display information for a tool approval card.
- * Contains all UI-relevant data for rendering the approval interface.
+ * Contains all UI-relevant data for rendering the approval interface	.
  */
 export interface ToolDisplayInfo {
 	icon: ReactNode;

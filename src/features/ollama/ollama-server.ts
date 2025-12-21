@@ -94,8 +94,7 @@ export async function startOllamaImpl(
   }
 
   try {
-    const cmd = installation.path || "ollama";
-    const child = deps.spawnFn(cmd, ["serve"], { detached: true, stdio: "ignore" });
+    const child = deps.spawnFn(installation.path!, ["serve"], { detached: true, stdio: "ignore" });
     child.unref();
     return { success: true as const };
   } catch (e) {

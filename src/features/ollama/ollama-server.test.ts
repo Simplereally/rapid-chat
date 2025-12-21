@@ -267,26 +267,6 @@ describe("ollama-server", () => {
         );
       });
 
-      test("uses 'ollama' fallback when installation path is null but exists=true", async () => {
-        const mockChildProcess = { unref: vi.fn() };
-        const spawnFn = vi.fn().mockReturnValue(mockChildProcess);
-
-        const result = await startOllamaImpl(
-          {
-            spawnFn,
-            getInstallation: vi.fn().mockResolvedValue({ exists: true, path: null }),
-            logError: vi.fn(),
-          },
-          {},
-        );
-
-        expect(result).toEqual({ success: true });
-        expect(spawnFn).toHaveBeenCalledWith(
-          "ollama",
-          ["serve"],
-          { detached: true, stdio: "ignore" },
-        );
-      });
     });
 
     describe("error handling", () => {
